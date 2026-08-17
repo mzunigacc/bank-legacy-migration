@@ -10,6 +10,9 @@ public class Transaction {
     private BigDecimal monto;
     private String tipo;
 
+    private boolean anomalia;
+    private String motivo;
+
     public Transaction() {
     }
 
@@ -18,6 +21,8 @@ public class Transaction {
         this.fecha = fecha;
         this.monto = monto;
         this.tipo = tipo;
+        this.anomalia = false;
+        this.motivo = null;
     }
 
     public Long getId() {
@@ -52,6 +57,22 @@ public class Transaction {
         this.tipo = tipo;
     }
 
+    public boolean isAnomalia() {
+        return anomalia;
+    }
+
+    public void setAnomalia(boolean anomalia) {
+        this.anomalia = anomalia;
+    }
+
+    public String getMotivo() {
+        return motivo;
+    }
+
+    public void setMotivo(String motivo) {
+        this.motivo = motivo;
+    }
+
     @Override
     public String toString() {
         return "Transaction{" +
@@ -59,6 +80,8 @@ public class Transaction {
                 ", fecha=" + fecha +
                 ", monto=" + monto +
                 ", tipo='" + tipo + '\'' +
+                ", anomalia=" + anomalia +
+                ", motivo='" + motivo + '\'' +
                 '}';
     }
 }
