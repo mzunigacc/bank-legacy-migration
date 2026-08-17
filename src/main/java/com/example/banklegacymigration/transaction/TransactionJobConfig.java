@@ -26,6 +26,9 @@ public class TransactionJobConfig {
                 .reader(transactionItemReader)
                 .processor(transactionProcessor)
                 .writer(transactionWriter)
+                .faultTolerant()
+                .skip(Exception.class)
+                .skipLimit(10)
                 .build();
     }
 
