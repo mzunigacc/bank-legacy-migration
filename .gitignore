@@ -3,3 +3,9 @@
 
 # Exploración local de datos
 exploration/
+
+# Maven
+target/
+
+# VS Code
+.vscode/
