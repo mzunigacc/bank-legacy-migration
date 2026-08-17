@@ -1,97 +1,168 @@
 # Bank Legacy Migration
 
-Proyecto desarrollado para la asignatura **Backend III**, cuyo objetivo es implementar una solución de procesamiento batch para migrar y transformar información proveniente de un sistema bancario legacy.
+Proyecto desarrollado con **Java, Spring Boot, Spring Batch y PostgreSQL** para procesar información proveniente de archivos CSV de un sistema bancario legado.
 
-La solución utiliza **Spring Boot**, **Spring Batch** y **PostgreSQL**, organizando el procesamiento mediante Jobs independientes y una arquitectura basada en las responsabilidades de lectura, procesamiento y escritura.
+La solución implementa tres procesos Batch independientes:
+
+- Procesamiento de transacciones.
+- Cálculo de intereses.
+- Generación de estados de cuenta y resúmenes.
+- Persistencia de resultados en PostgreSQL.
+- Identificación y registro de anomalías durante el procesamiento.
+
+---
 
 ## Tecnologías utilizadas
 
 - Java 17
-- Spring Boot
+- Spring Boot 3
 - Spring Batch
-- Maven
 - PostgreSQL
+- Maven
 - Git / GitHub
+
+---
 
 ## Estructura del proyecto
 
-El proyecto implementa tres procesos batch independientes:
-
 ```text
-src/main/java/com/example/banklegacymigration/
-├── transaction/
-│   ├── Transaction.java
-│   ├── TransactionReader.java
-│   ├── TransactionProcessor.java
-│   ├── TransactionWriter.java
-│   └── TransactionJobConfig.java
+bank-legacy-migration/
+├── data/
+│   ├── transacciones.csv
+│   ├── intereses.csv
+│   └── cuentas_anuales.csv
 │
-├── interest/
-│   ├── InterestAccount.java
-│   ├── InterestReader.java
-│   ├── InterestProcessor.java
-│   ├── InterestWriter.java
-│   └── InterestJobConfig.java
+├── database/
+│   └── schema.sql
 │
-├── statement/
-│   ├── AnnualStatement.java
-│   ├── StatementReader.java
-│   ├── StatementProcessor.java
-│   ├── StatementWriter.java
-│   └── StatementJobConfig.java
+├── docs/
+│   └── evidencias/
+│       ├── transaction-job.png
+│       ├── interest-job.png
+│       └── statement-job.png
 │
-└── BankLegacyMigrationApplication.java
+├── exploration/
+│   └── explore_data.py
+│
+├── src/main/java/com/example/banklegacymigration/
+│   ├── transaction/
+│   ├── interest/
+│   └── statement/
+│
+├── src/main/resources/
+│   └── application.properties
+│
+├── pom.xml
+└── README.md
 ```
 
-Cada Job mantiene separadas las responsabilidades principales de Spring Batch:
+Cada dominio mantiene separados sus componentes principales de Spring Batch:
 
 ```text
 Reader → Processor → Writer
 ```
 
-- **Reader:** obtiene los registros desde los archivos CSV legacy.
-- **Processor:** aplica las reglas de transformación y detección de anomalías.
-- **Writer:** persiste los registros procesados en PostgreSQL.
-- **JobConfig:** configura y orquesta los Steps correspondientes a cada proceso.
+---
 
 ## Jobs implementados
 
 ### Transaction Job
 
-Procesa las transacciones bancarias diarias provenientes de `transacciones.csv`.
+Procesa el archivo:
 
-El proceso:
+```text
+data/transacciones.csv
+```
 
-- Lee las transacciones desde el archivo CSV.
-- Identifica registros anómalos.
-- Persiste los resultados en PostgreSQL.
-- Genera un resumen diario de transacciones mediante un segundo Step.
+El Job realiza:
 
-El resumen diario contiene la cantidad de transacciones, monto total y cantidad de anomalías por fecha.
+1. Lectura del archivo CSV.
+2. Conversión de cada registro a un objeto `Transaction`.
+3. Validación y detección de anomalías.
+4. Persistencia en PostgreSQL.
+5. Generación de un resumen diario de transacciones.
+
+Las transacciones con montos negativos o iguales a cero se conservan, pero son identificadas mediante los campos:
+
+```text
+anomalia
+motivo
+```
+
+El Job contiene dos Steps:
+
+```text
+transactionStep
+      ↓
+dailySummaryStep
+```
+
+El segundo Step genera la tabla:
+
+```text
+resumen_transacciones_diarias
+```
+
+con cantidad de transacciones, monto total y cantidad de anomalías por fecha.
+
+---
 
 ### Interest Job
 
-Procesa las cuentas contenidas en `intereses.csv` para realizar el cálculo de intereses.
+Procesa el archivo:
 
-Se utilizaron las siguientes tasas como supuesto de implementación:
+```text
+data/intereses.csv
+```
 
-- Ahorro: **1%**
-- Préstamo: **2%**
+El Job calcula los intereses correspondientes a cada cuenta.
 
-Los tipos de cuenta no contemplados son almacenados como anomalías para mantener trazabilidad del registro.
+Para efectos del ejercicio se consideran las siguientes tasas:
 
-El proceso calcula el interés correspondiente y el saldo final de cada cuenta antes de persistir los resultados.
+- Cuenta de ahorro: 1%.
+- Préstamo: 2%.
+
+Además, se calcula el saldo final:
+
+```text
+saldo_final = saldo + interes
+```
+
+Los saldos menores o iguales a cero y los tipos de cuenta no contemplados son registrados como anomalías.
+
+Los resultados son persistidos en la tabla:
+
+```text
+intereses
+```
+
+---
 
 ### Statement Job
 
-Procesa los movimientos contenidos en `cuentas_anuales.csv`.
+Procesa el archivo:
 
-El Job consta de dos Steps:
+```text
+data/cuentas_anuales.csv
+```
 
-1. Procesamiento y persistencia de los movimientos individuales.
-2. Generación de un resumen anual agrupado por cuenta.
+Cada movimiento es clasificado según su efecto sobre la cuenta.
 
-El resumen incluye:
+Los registros procesados son almacenados en:
+
+```text
+estados_cuenta
+```
+
+El Job contiene dos Steps:
+
+```text
+statementStep
+      ↓
+annualSummaryStep
+```
+
+El segundo Step genera un resumen por cuenta con:
 
 - Cantidad de movimientos.
 - Total de ingresos.
@@ -99,50 +170,111 @@ El resumen incluye:
 - Saldo neto.
 - Cantidad de anomalías.
 
-## Tratamiento de anomalías
-
-Se utilizó un criterio simple orientado a conservar la información siempre que el registro pueda ser procesado.
-
-Los registros válidos se almacenan normalmente, mientras que situaciones que requieren revisión se mantienen en la base de datos mediante los campos:
+Los resultados se almacenan en:
 
 ```text
-anomalia
-motivo
+resumen_anual
 ```
 
-Esto permite conservar el registro original y, al mismo tiempo, identificar por qué fue considerado anómalo.
+---
 
-Los errores estructurales que impiden interpretar correctamente un registro pueden ser omitidos mediante la tolerancia a fallos configurada en Spring Batch.
+## Manejo de anomalías
+
+El proyecto distingue entre registros procesables y registros que presentan condiciones anómalas.
+
+Cuando un registro puede ser interpretado, se conserva y se marca utilizando:
+
+```text
+anomalia = true
+motivo = descripción de la anomalía
+```
+
+Los Steps utilizan además tolerancia a fallos mediante Spring Batch:
+
+```java
+.faultTolerant()
+.skip(Exception.class)
+.skipLimit(10)
+```
+
+Esto permite evitar que un registro con problemas detenga inmediatamente el procesamiento completo del archivo.
+
+---
 
 ## Persistencia e idempotencia
 
-Los resultados procesados se almacenan en **PostgreSQL**.
+Los resultados procesados son almacenados en PostgreSQL.
 
-Para permitir la reejecución de los Jobs sin duplicar información, los Writers utilizan las claves definidas en la base de datos junto con:
-
-```sql
-ON CONFLICT (...) DO NOTHING
-```
-
-De esta manera, la idempotencia se resuelve mediante las restricciones de la base de datos, sin incorporar mecanismos adicionales de hashing o deduplicación.
-
-Para las tablas de resumen, que representan información derivada, se utiliza:
+Para permitir la reejecución de los Jobs sin duplicar registros se utilizan restricciones de clave primaria y operaciones:
 
 ```sql
-ON CONFLICT (...) DO UPDATE
+ON CONFLICT ... DO NOTHING
 ```
 
-Esto permite recalcular y actualizar los resultados cuando el Job vuelve a ejecutarse.
+Esta estrategia entrega una solución simple de idempotencia utilizando las capacidades de la base de datos relacional, sin incorporar mecanismos adicionales de hashing o deduplicación.
 
-## Configuración
+Para las tablas de resumen se utiliza actualización ante conflicto cuando corresponde, permitiendo recalcular los resultados derivados sin generar registros duplicados.
 
-La conexión a PostgreSQL se encuentra definida en:
+---
+
+## Configuración de PostgreSQL
+
+La conexión se configura en:
 
 ```text
 src/main/resources/application.properties
 ```
 
-El proyecto contiene tres Jobs. Antes de ejecutar la aplicación se debe descomentar **solo uno** en `application.properties`:
+Ejemplo:
+
+```properties
+spring.datasource.url=jdbc:postgresql://localhost:5432/bank_legacy
+spring.datasource.username=matiaszuniga
+
+spring.batch.jdbc.initialize-schema=always
+```
+
+El esquema de las tablas utilizadas por los Jobs se encuentra versionado en:
+
+```text
+database/schema.sql
+```
+
+---
+
+## Ejecución
+
+### 1. Crear la base de datos
+
+El proyecto utiliza PostgreSQL. Primero se debe crear la base de datos:
+
+```bash
+createdb bank_legacy
+```
+
+Luego se crean las tablas necesarias utilizando el esquema incluido en el repositorio:
+
+```bash
+psql bank_legacy < database/schema.sql
+```
+
+Spring Batch crea sus propias tablas de metadatos al iniciar la aplicación mediante:
+
+```properties
+spring.batch.jdbc.initialize-schema=always
+```
+
+### 2. Seleccionar el Job
+
+Existen tres Jobs independientes.
+
+En:
+
+```text
+src/main/resources/application.properties
+```
+
+se debe descomentar únicamente el Job que se desea ejecutar:
 
 ```properties
 # spring.batch.job.name=transactionJob
@@ -150,27 +282,37 @@ El proyecto contiene tres Jobs. Antes de ejecutar la aplicación se debe descome
 # spring.batch.job.name=statementJob
 ```
 
-Por ejemplo:
+Por ejemplo, para ejecutar Transaction:
 
 ```properties
 spring.batch.job.name=transactionJob
 ```
 
-## Ejecución
+### 3. Ejecutar el Job
 
 Desde la raíz del proyecto:
-
-```bash
-mvn spring-boot:run
-```
-
-Para ejecutar una nueva instancia del Job durante pruebas se puede proporcionar un parámetro identificador:
 
 ```bash
 mvn spring-boot:run -Dspring-boot.run.arguments="run.id=10"
 ```
 
+El parámetro `run.id` permite identificar una nueva instancia de ejecución del Job.
+
 Spring Batch registra la ejecución de cada Job y sus Steps en sus tablas de metadatos.
+
+---
+
+## Tablas generadas
+
+Los procesos almacenan sus resultados en las siguientes tablas:
+
+| Job | Tabla principal | Tabla derivada |
+|---|---|---|
+| Transaction | `transacciones` | `resumen_transacciones_diarias` |
+| Interest | `intereses` | - |
+| Statement | `estados_cuenta` | `resumen_anual` |
+
+---
 
 ## Evidencias
 
