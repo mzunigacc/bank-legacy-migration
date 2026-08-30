@@ -8,6 +8,7 @@ import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.item.file.FlatFileParseException;
 import org.springframework.batch.item.support.SynchronizedItemStreamReader;
 import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskExecutor;
@@ -17,6 +18,15 @@ import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 public class StatementJobConfig {
+
+    @Value("${batch.chunk-size}")
+    private int chunkSize;
+
+    @Value("${batch.skip-limit}")
+    private int skipLimit;
+
+    @Value("${batch.retry-limit}")
+    private int retryLimit;
 
     @Bean
     public Step statementStep(
@@ -31,7 +41,7 @@ public class StatementJobConfig {
 
         return new StepBuilder("statementStep", jobRepository)
                 .<AnnualStatement, AnnualStatement>chunk(
-                        5,
+                        chunkSize,
                         transactionManager
                 )
                 .reader(statementItemReader)
@@ -42,10 +52,10 @@ public class StatementJobConfig {
 
                 .skip(InvalidStatementException.class)
                 .skip(FlatFileParseException.class)
-                .skipLimit(10)
+                .skipLimit(skipLimit)
 
                 .retry(TransientDataAccessException.class)
-                .retryLimit(3)
+                .retryLimit(retryLimit)
 
                 .listener(statementSkipListener)
                 .listener(statementStepExecutionListener)

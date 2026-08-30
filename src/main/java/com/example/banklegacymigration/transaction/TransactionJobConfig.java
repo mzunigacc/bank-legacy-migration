@@ -14,93 +14,103 @@ import org.springframework.batch.item.file.FlatFileParseException;
 import org.springframework.dao.TransientDataAccessException;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.batch.item.support.SynchronizedItemStreamReader;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class TransactionJobConfig {
 
-   @Bean
-public Step transactionStep(
-        JobRepository jobRepository,
-        PlatformTransactionManager transactionManager,
-        SynchronizedItemStreamReader<Transaction> transactionItemReader,
-        TransactionProcessor transactionProcessor,
-        TransactionWriter transactionWriter,
-        TransactionSkipListener transactionSkipListener,
-        TransactionStepExecutionListener transactionStepExecutionListener,
-        TaskExecutor batchTaskExecutor) {
+    @Value("${batch.chunk-size}")
+    private int chunkSize;
 
-    return new StepBuilder("transactionStep", jobRepository)
-            .<Transaction, Transaction>chunk(5, transactionManager)
-            .reader(transactionItemReader)
-            .processor(transactionProcessor)
-            .writer(transactionWriter)
+    @Value("${batch.skip-limit}")
+    private int skipLimit;
 
-            .faultTolerant()
+    @Value("${batch.retry-limit}")
+    private int retryLimit;
 
-            .skip(InvalidTransactionException.class)
-            .skip(FlatFileParseException.class)
-            .skipLimit(10)
+    @Bean
+    public Step transactionStep(
+            JobRepository jobRepository,
+            PlatformTransactionManager transactionManager,
+            SynchronizedItemStreamReader<Transaction> transactionItemReader,
+            TransactionProcessor transactionProcessor,
+            TransactionWriter transactionWriter,
+            TransactionSkipListener transactionSkipListener,
+            TransactionStepExecutionListener transactionStepExecutionListener,
+            TaskExecutor batchTaskExecutor) {
 
-            .retry(TransientDataAccessException.class)
-            .retryLimit(3)
+        return new StepBuilder("transactionStep", jobRepository)
+                .<Transaction, Transaction>chunk(chunkSize, transactionManager)
+                .reader(transactionItemReader)
+                .processor(transactionProcessor)
+                .writer(transactionWriter)
 
-            .listener(transactionSkipListener)
-            .listener(transactionStepExecutionListener)
+                .faultTolerant()
 
-            .taskExecutor(batchTaskExecutor)
+                .skip(InvalidTransactionException.class)
+                .skip(FlatFileParseException.class)
+                .skipLimit(skipLimit)
 
-            .build();
+                .retry(TransientDataAccessException.class)
+                .retryLimit(retryLimit)
+
+                .listener(transactionSkipListener)
+                .listener(transactionStepExecutionListener)
+
+                .taskExecutor(batchTaskExecutor)
+
+                .build();
     }
 
     @Bean
     public Job transactionJob(
-        JobRepository jobRepository,
-        Step transactionStep,
-        Step dailySummaryStep,
-        TransactionJobExecutionListener transactionJobExecutionListener) {
-        
+            JobRepository jobRepository,
+            Step transactionStep,
+            Step dailySummaryStep,
+            TransactionJobExecutionListener transactionJobExecutionListener) {
+
         return new JobBuilder("transactionJob", jobRepository)
-            .listener(transactionJobExecutionListener)
-            .start(transactionStep)
-            .next(dailySummaryStep)
-            .build();
+                .listener(transactionJobExecutionListener)
+                .start(transactionStep)
+                .next(dailySummaryStep)
+                .build();
     }
 
     @Bean
     public Step dailySummaryStep(
-        JobRepository jobRepository,
-        PlatformTransactionManager transactionManager,
-        JdbcTemplate jdbcTemplate) {
+            JobRepository jobRepository,
+            PlatformTransactionManager transactionManager,
+            JdbcTemplate jdbcTemplate) {
 
         return new StepBuilder("dailySummaryStep", jobRepository)
-            .tasklet((contribution, chunkContext) -> {
+                .tasklet((contribution, chunkContext) -> {
 
-                jdbcTemplate.update(
-                        """
-                        INSERT INTO resumen_transacciones_diarias (
-                            fecha,
-                            cantidad_transacciones,
-                            monto_total,
-                            cantidad_anomalias
-                        )
-                        SELECT
-                            fecha,
-                            COUNT(*),
-                            COALESCE(SUM(monto), 0),
-                            COUNT(*) FILTER (WHERE anomalia = true)
-                        FROM transacciones
-                        GROUP BY fecha
+                    jdbcTemplate.update(
+                            """
+                            INSERT INTO resumen_transacciones_diarias (
+                                fecha,
+                                cantidad_transacciones,
+                                monto_total,
+                                cantidad_anomalias
+                            )
+                            SELECT
+                                fecha,
+                                COUNT(*),
+                                COALESCE(SUM(monto), 0),
+                                COUNT(*) FILTER (WHERE anomalia = true)
+                            FROM transacciones
+                            GROUP BY fecha
 
-                        ON CONFLICT (fecha)
-                        DO UPDATE SET
-                            cantidad_transacciones = EXCLUDED.cantidad_transacciones,
-                            monto_total = EXCLUDED.monto_total,
-                            cantidad_anomalias = EXCLUDED.cantidad_anomalias
-                        """
-                );
+                            ON CONFLICT (fecha)
+                            DO UPDATE SET
+                                cantidad_transacciones = EXCLUDED.cantidad_transacciones,
+                                monto_total = EXCLUDED.monto_total,
+                                cantidad_anomalias = EXCLUDED.cantidad_anomalias
+                            """
+                    );
 
-                return RepeatStatus.FINISHED;
-            }, transactionManager)
-            .build();
-        }
+                    return RepeatStatus.FINISHED;
+                }, transactionManager)
+                .build();
+    }
 }
