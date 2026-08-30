@@ -5,8 +5,8 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.FlatFileParseException;
-import org.springframework.batch.item.support.SynchronizedItemStreamReader;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -28,18 +28,20 @@ public class StatementJobConfig {
     @Value("${batch.retry-limit}")
     private int retryLimit;
 
+    @Value("${batch.partition.grid-size}")
+    private int gridSize;
+
     @Bean
-    public Step statementStep(
+    public Step statementWorkerStep(
             JobRepository jobRepository,
             PlatformTransactionManager transactionManager,
-            SynchronizedItemStreamReader<AnnualStatement> statementItemReader,
+            FlatFileItemReader<AnnualStatement> statementItemReader,
             StatementProcessor statementProcessor,
             StatementWriter statementWriter,
             StatementSkipListener statementSkipListener,
-            StatementStepExecutionListener statementStepExecutionListener,
-            TaskExecutor batchTaskExecutor) {
+            StatementStepExecutionListener statementStepExecutionListener) {
 
-        return new StepBuilder("statementStep", jobRepository)
+        return new StepBuilder("statementWorkerStep", jobRepository)
                 .<AnnualStatement, AnnualStatement>chunk(
                         chunkSize,
                         transactionManager
@@ -60,8 +62,24 @@ public class StatementJobConfig {
                 .listener(statementSkipListener)
                 .listener(statementStepExecutionListener)
 
-                .taskExecutor(batchTaskExecutor)
+                .build();
+    }
 
+    @Bean
+    public Step statementPartitionStep(
+            JobRepository jobRepository,
+            Step statementWorkerStep,
+            StatementPartitioner statementPartitioner,
+            TaskExecutor batchTaskExecutor) {
+
+        return new StepBuilder("statementPartitionStep", jobRepository)
+                .partitioner(
+                        "statementWorkerStep",
+                        statementPartitioner
+                )
+                .step(statementWorkerStep)
+                .gridSize(gridSize)
+                .taskExecutor(batchTaskExecutor)
                 .build();
     }
 
@@ -126,13 +144,13 @@ public class StatementJobConfig {
     @Bean
     public Job statementJob(
             JobRepository jobRepository,
-            Step statementStep,
+            Step statementPartitionStep,
             Step annualSummaryStep,
             StatementJobExecutionListener statementJobExecutionListener) {
 
         return new JobBuilder("statementJob", jobRepository)
                 .listener(statementJobExecutionListener)
-                .start(statementStep)
+                .start(statementPartitionStep)
                 .next(annualSummaryStep)
                 .build();
     }

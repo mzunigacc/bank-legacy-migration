@@ -2,10 +2,10 @@ package com.example.banklegacymigration.interest;
 
 import java.math.BigDecimal;
 
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
-import org.springframework.batch.item.support.SynchronizedItemStreamReader;
-import org.springframework.batch.item.support.builder.SynchronizedItemStreamReaderBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
@@ -14,39 +14,38 @@ import org.springframework.core.io.FileSystemResource;
 public class InterestReader {
 
     @Bean
-    public SynchronizedItemStreamReader<InterestAccount> interestItemReader() {
+    @StepScope
+    public FlatFileItemReader<InterestAccount> interestItemReader(
+            @Value("#{stepExecutionContext['start']}") Integer start,
+            @Value("#{stepExecutionContext['end']}") Integer end) {
 
-        FlatFileItemReader<InterestAccount> reader =
-                new FlatFileItemReaderBuilder<InterestAccount>()
-                        .name("interestItemReader")
-                        .resource(
-                                new FileSystemResource(
-                                        "data/intereses.csv"
-                                )
+        return new FlatFileItemReaderBuilder<InterestAccount>()
+                .name("interestItemReader")
+                .resource(
+                        new FileSystemResource(
+                                "data/intereses.csv"
                         )
-                        .linesToSkip(1)
-                        .delimited()
-                        .names(
-                                "cuenta_id",
-                                "nombre",
-                                "saldo",
-                                "edad",
-                                "tipo"
-                        )
-                        .fieldSetMapper(fieldSet -> new InterestAccount(
-                                fieldSet.readLong("cuenta_id"),
-                                fieldSet.readString("nombre"),
-                                new BigDecimal(
-                                        fieldSet.readString("saldo")
-                                ),
-                                fieldSet.readInt("edad"),
-                                fieldSet.readString("tipo")
-                        ))
-                        .saveState(false)
-                        .build();
-
-        return new SynchronizedItemStreamReaderBuilder<InterestAccount>()
-                .delegate(reader)
+                )
+                .linesToSkip(1)
+                .delimited()
+                .names(
+                        "cuenta_id",
+                        "nombre",
+                        "saldo",
+                        "edad",
+                        "tipo"
+                )
+                .fieldSetMapper(fieldSet -> new InterestAccount(
+                        fieldSet.readLong("cuenta_id"),
+                        fieldSet.readString("nombre"),
+                        new BigDecimal(
+                                fieldSet.readString("saldo")
+                        ),
+                        fieldSet.readInt("edad"),
+                        fieldSet.readString("tipo")
+                ))
+                .currentItemCount(start)
+                .maxItemCount(end)
                 .build();
     }
 }

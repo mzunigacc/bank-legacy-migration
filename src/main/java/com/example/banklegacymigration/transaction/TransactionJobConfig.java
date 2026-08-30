@@ -5,16 +5,16 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.item.file.FlatFileItemReader;
+import org.springframework.batch.item.file.FlatFileParseException;
+import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.batch.repeat.RepeatStatus;
-import org.springframework.batch.item.file.FlatFileParseException;
-import org.springframework.dao.TransientDataAccessException;
 import org.springframework.core.task.TaskExecutor;
-import org.springframework.batch.item.support.SynchronizedItemStreamReader;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.TransientDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.PlatformTransactionManager;
 
 @Configuration
 public class TransactionJobConfig {
@@ -28,19 +28,22 @@ public class TransactionJobConfig {
     @Value("${batch.retry-limit}")
     private int retryLimit;
 
+    @Value("${batch.partition.grid-size}")
+    private int gridSize;
+
     @Bean
-    public Step transactionStep(
+    public Step transactionWorkerStep(
             JobRepository jobRepository,
             PlatformTransactionManager transactionManager,
-            SynchronizedItemStreamReader<Transaction> transactionItemReader,
+            FlatFileItemReader<Transaction> transactionItemReader,
             TransactionProcessor transactionProcessor,
             TransactionWriter transactionWriter,
             TransactionSkipListener transactionSkipListener,
-            TransactionStepExecutionListener transactionStepExecutionListener,
-            TaskExecutor batchTaskExecutor) {
+            TransactionStepExecutionListener transactionStepExecutionListener) {
 
-        return new StepBuilder("transactionStep", jobRepository)
+        return new StepBuilder("transactionWorkerStep", jobRepository)
                 .<Transaction, Transaction>chunk(chunkSize, transactionManager)
+
                 .reader(transactionItemReader)
                 .processor(transactionProcessor)
                 .writer(transactionWriter)
@@ -57,21 +60,37 @@ public class TransactionJobConfig {
                 .listener(transactionSkipListener)
                 .listener(transactionStepExecutionListener)
 
-                .taskExecutor(batchTaskExecutor)
+                .build();
+    }
 
+    @Bean
+    public Step transactionPartitionStep(
+            JobRepository jobRepository,
+            Step transactionWorkerStep,
+            TransactionPartitioner transactionPartitioner,
+            TaskExecutor batchTaskExecutor) {
+
+        return new StepBuilder("transactionPartitionStep", jobRepository)
+                .partitioner(
+                        "transactionWorkerStep",
+                        transactionPartitioner
+                )
+                .step(transactionWorkerStep)
+                .gridSize(gridSize)
+                .taskExecutor(batchTaskExecutor)
                 .build();
     }
 
     @Bean
     public Job transactionJob(
             JobRepository jobRepository,
-            Step transactionStep,
+            Step transactionPartitionStep,
             Step dailySummaryStep,
             TransactionJobExecutionListener transactionJobExecutionListener) {
 
         return new JobBuilder("transactionJob", jobRepository)
                 .listener(transactionJobExecutionListener)
-                .start(transactionStep)
+                .start(transactionPartitionStep)
                 .next(dailySummaryStep)
                 .build();
     }
@@ -97,19 +116,25 @@ public class TransactionJobConfig {
                                 fecha,
                                 COUNT(*),
                                 COALESCE(SUM(monto), 0),
-                                COUNT(*) FILTER (WHERE anomalia = true)
+                                COUNT(*) FILTER (
+                                    WHERE anomalia = true
+                                )
                             FROM transacciones
                             GROUP BY fecha
 
                             ON CONFLICT (fecha)
                             DO UPDATE SET
-                                cantidad_transacciones = EXCLUDED.cantidad_transacciones,
-                                monto_total = EXCLUDED.monto_total,
-                                cantidad_anomalias = EXCLUDED.cantidad_anomalias
+                                cantidad_transacciones =
+                                    EXCLUDED.cantidad_transacciones,
+                                monto_total =
+                                    EXCLUDED.monto_total,
+                                cantidad_anomalias =
+                                    EXCLUDED.cantidad_anomalias
                             """
                     );
 
                     return RepeatStatus.FINISHED;
+
                 }, transactionManager)
                 .build();
     }

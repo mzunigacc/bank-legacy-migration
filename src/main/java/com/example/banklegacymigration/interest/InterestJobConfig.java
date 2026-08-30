@@ -5,8 +5,8 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.builder.StepBuilder;
+import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.FlatFileParseException;
-import org.springframework.batch.item.support.SynchronizedItemStreamReader;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,18 +26,20 @@ public class InterestJobConfig {
     @Value("${batch.retry-limit}")
     private int retryLimit;
 
+    @Value("${batch.partition.grid-size}")
+    private int gridSize;
+
     @Bean
-    public Step interestStep(
+    public Step interestWorkerStep(
             JobRepository jobRepository,
             PlatformTransactionManager transactionManager,
-            SynchronizedItemStreamReader<InterestAccount> interestItemReader,
+            FlatFileItemReader<InterestAccount> interestItemReader,
             InterestProcessor interestProcessor,
             InterestWriter interestWriter,
             InterestSkipListener interestSkipListener,
-            InterestStepExecutionListener interestStepExecutionListener,
-            TaskExecutor batchTaskExecutor) {
+            InterestStepExecutionListener interestStepExecutionListener) {
 
-        return new StepBuilder("interestStep", jobRepository)
+        return new StepBuilder("interestWorkerStep", jobRepository)
                 .<InterestAccount, InterestAccount>chunk(
                         chunkSize,
                         transactionManager
@@ -58,20 +60,36 @@ public class InterestJobConfig {
                 .listener(interestSkipListener)
                 .listener(interestStepExecutionListener)
 
-                .taskExecutor(batchTaskExecutor)
+                .build();
+    }
 
+    @Bean
+    public Step interestPartitionStep(
+            JobRepository jobRepository,
+            Step interestWorkerStep,
+            InterestPartitioner interestPartitioner,
+            TaskExecutor batchTaskExecutor) {
+
+        return new StepBuilder("interestPartitionStep", jobRepository)
+                .partitioner(
+                        "interestWorkerStep",
+                        interestPartitioner
+                )
+                .step(interestWorkerStep)
+                .gridSize(gridSize)
+                .taskExecutor(batchTaskExecutor)
                 .build();
     }
 
     @Bean
     public Job interestJob(
             JobRepository jobRepository,
-            Step interestStep,
+            Step interestPartitionStep,
             InterestJobExecutionListener interestJobExecutionListener) {
 
         return new JobBuilder("interestJob", jobRepository)
                 .listener(interestJobExecutionListener)
-                .start(interestStep)
+                .start(interestPartitionStep)
                 .build();
     }
 }
