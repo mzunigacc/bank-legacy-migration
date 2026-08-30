@@ -1,14 +1,18 @@
-# Bank Legacy Migration
+# Bank Legacy Migration - Semana 2
 
-Proyecto desarrollado con **Java, Spring Boot, Spring Batch y PostgreSQL** para procesar información proveniente de archivos CSV de un sistema bancario legado.
+Proyecto desarrollado con **Java, Spring Boot, Spring Batch y PostgreSQL** para procesar información proveniente de archivos CSV de un sistema bancario legacy.
 
-La solución implementa tres procesos Batch independientes:
+Esta versión corresponde a la continuidad del proyecto desarrollado en Semana 1 e incorpora mejoras orientadas a:
 
-- Procesamiento de transacciones.
-- Cálculo de intereses.
-- Generación de estados de cuenta y resúmenes.
-- Persistencia de resultados en PostgreSQL.
-- Identificación y registro de anomalías durante el procesamiento.
+- tolerancia a fallos;
+- validación controlada de registros;
+- políticas de `skip` y `retry`;
+- excepciones personalizadas;
+- listeners y trazabilidad;
+- procesamiento por chunks;
+- ejecución paralela mediante múltiples hilos.
+
+La actividad de Semana 2 solicita mantener los tres procesos batch y agregar políticas de tolerancia a fallos y escalamiento con **3 hilos de ejecución paralela y chunks de tamaño 5**. :contentReference[oaicite:0]{index=0}
 
 ---
 
@@ -23,7 +27,7 @@ La solución implementa tres procesos Batch independientes:
 
 ---
 
-## Estructura del proyecto
+## Estructura general
 
 ```text
 bank-legacy-migration/
@@ -38,13 +42,12 @@ bank-legacy-migration/
 ├── docs/
 │   └── evidencias/
 │       ├── transaction-job.png
+│       ├── transaction-skip.png
 │       ├── interest-job.png
 │       └── statement-job.png
 │
-├── exploration/
-│   └── explore_data.py
-│
 ├── src/main/java/com/example/banklegacymigration/
+│   ├── config/
 │   ├── transaction/
 │   ├── interest/
 │   └── statement/
@@ -56,40 +59,55 @@ bank-legacy-migration/
 └── README.md
 ```
 
-Cada dominio mantiene separados sus componentes principales de Spring Batch:
+Cada proceso mantiene la arquitectura:
 
 ```text
 Reader → Processor → Writer
 ```
 
+y agrega componentes de resiliencia y seguimiento:
+
+```text
+Reader
+  ↓
+Processor
+  ├── validación
+  ├── transformación
+  └── excepciones personalizadas
+  ↓
+Writer
+  ↓
+PostgreSQL
+
++ Skip
++ Retry
++ Listeners
++ Logs
++ Chunk(5)
++ TaskExecutor
+```
+
 ---
 
-## Jobs implementados
+## Procesos implementados
 
 ### Transaction Job
 
-Procesa el archivo:
+Procesa:
 
 ```text
 data/transacciones.csv
 ```
 
-El Job realiza:
+El Job:
 
-1. Lectura del archivo CSV.
-2. Conversión de cada registro a un objeto `Transaction`.
-3. Validación y detección de anomalías.
-4. Persistencia en PostgreSQL.
-5. Generación de un resumen diario de transacciones.
+- valida identificadores y tipos de transacción;
+- conserva montos negativos o iguales a cero como anomalías procesables;
+- omite registros inválidos mediante excepciones específicas;
+- persiste las transacciones válidas;
+- genera un resumen diario mediante `dailySummaryStep`.
 
-Las transacciones con montos negativos o iguales a cero se conservan, pero son identificadas mediante los campos:
-
-```text
-anomalia
-motivo
-```
-
-El Job contiene dos Steps:
+Flujo:
 
 ```text
 transactionStep
@@ -97,64 +115,46 @@ transactionStep
 dailySummaryStep
 ```
 
-El segundo Step genera la tabla:
-
-```text
-resumen_transacciones_diarias
-```
-
-con cantidad de transacciones, monto total y cantidad de anomalías por fecha.
-
 ---
 
 ### Interest Job
 
-Procesa el archivo:
+Procesa:
 
 ```text
 data/intereses.csv
 ```
 
-El Job calcula los intereses correspondientes a cada cuenta.
+Calcula intereses y saldo final para cuentas de ahorro y préstamos.
 
-Para efectos del ejercicio se consideran las siguientes tasas:
+Tasas utilizadas:
 
-- Cuenta de ahorro: 1%.
-- Préstamo: 2%.
+- ahorro: 1%;
+- préstamo: 2%.
 
-Además, se calcula el saldo final:
+Los tipos de cuenta conocidos pero no contemplados para cálculo, como `hipoteca`, se conservan como anomalías.
 
-```text
-saldo_final = saldo + interes
-```
-
-Los saldos menores o iguales a cero y los tipos de cuenta no contemplados son registrados como anomalías.
-
-Los resultados son persistidos en la tabla:
-
-```text
-intereses
-```
+También se incorporan validaciones, excepciones personalizadas, listeners y procesamiento paralelo.
 
 ---
 
 ### Statement Job
 
-Procesa el archivo:
+Procesa:
 
 ```text
 data/cuentas_anuales.csv
 ```
 
-Cada movimiento es clasificado según su efecto sobre la cuenta.
-
-Los registros procesados son almacenados en:
+Clasifica los movimientos como:
 
 ```text
-estados_cuenta
+INGRESO
+EGRESO
+SIN_MOVIMIENTO
 ```
 
-El Job contiene dos Steps:
+y genera posteriormente un resumen anual por cuenta mediante:
 
 ```text
 statementStep
@@ -162,119 +162,258 @@ statementStep
 annualSummaryStep
 ```
 
-El segundo Step genera un resumen por cuenta con:
+El resumen incluye:
 
-- Cantidad de movimientos.
-- Total de ingresos.
-- Total de egresos.
-- Saldo neto.
-- Cantidad de anomalías.
-
-Los resultados se almacenan en:
-
-```text
-resumen_anual
-```
+- cantidad de movimientos;
+- total de ingresos;
+- total de egresos;
+- saldo neto;
+- cantidad de anomalías.
 
 ---
 
-## Manejo de anomalías
+## Deuda técnica y correcciones de Semana 1
 
-El proyecto distingue entre registros procesables y registros que presentan condiciones anómalas.
+Antes de implementar las funcionalidades de Semana 2 se corrigieron inconsistencias detectadas en la entrega anterior.
 
-Cuando un registro puede ser interpretado, se conserva y se marca utilizando:
+### Consistencia entre modelo y esquema
+
+Se alinearon las columnas utilizadas por los Writers con `database/schema.sql`, incorporando campos faltantes como:
 
 ```text
-anomalia = true
-motivo = descripción de la anomalía
+edad
+descripcion
 ```
 
-Los Steps utilizan además tolerancia a fallos mediante Spring Batch:
+### Restricciones de unicidad
+
+Se revisaron las restricciones utilizadas por:
+
+```sql
+ON CONFLICT
+```
+
+para que coincidan con claves primarias o restricciones `UNIQUE` reales en PostgreSQL.
+
+Esto permite mantener la estrategia de persistencia idempotente sin producir conflictos inválidos.
+
+### Finalización de Tasklets
+
+Los tasklets de resumen ahora finalizan explícitamente con:
 
 ```java
-.faultTolerant()
+RepeatStatus.FINISHED
+```
+
+en lugar de retornar `null`.
+
+---
+
+## Manejo de errores y excepciones
+
+Semana 1 utilizaba una política general:
+
+```java
 .skip(Exception.class)
+```
+
+En Semana 2 se reemplazó por políticas específicas.
+
+Se distinguen tres situaciones principales:
+
+```text
+Anomalía procesable
+→ se conserva y marca
+
+Dato inválido
+→ SKIP
+
+Error transitorio de infraestructura
+→ RETRY
+```
+
+### Excepciones personalizadas
+
+Cada dominio posee una excepción propia de validación, por ejemplo:
+
+```text
+InvalidTransactionException
+InvalidInterestAccountException
+InvalidStatementException
+```
+
+Esto permite distinguir errores de negocio de otros errores inesperados.
+
+### Skip
+
+Se utilizan omisiones controladas para errores identificables, como:
+
+- registros inválidos;
+- errores de parsing;
+- formatos incompatibles.
+
+Ejemplo:
+
+```java
+.skip(InvalidTransactionException.class)
+.skip(FlatFileParseException.class)
 .skipLimit(10)
 ```
 
-Esto permite evitar que un registro con problemas detenga inmediatamente el procesamiento completo del archivo.
+### Retry
+
+Los errores transitorios de persistencia pueden reintentarse:
+
+```java
+.retry(TransientDataAccessException.class)
+.retryLimit(3)
+```
+
+De esta manera, los errores permanentes del dato no son tratados igual que problemas potencialmente temporales de infraestructura.
+
+La pauta evalúa explícitamente políticas de finalización, re-ejecución, reintentos, omisiones y manejo de errores mediante listeners. :contentReference[oaicite:1]{index=1}
+
+---
+
+## Listeners y trazabilidad
+
+Cada Job incorpora listeners para registrar diferentes niveles del procesamiento.
+
+### JobExecutionListener
+
+Registra:
+
+```text
+inicio del Job
+parámetros
+estado final
+exit status
+```
+
+### StepExecutionListener
+
+Registra métricas como:
+
+```text
+read
+write
+readSkip
+processSkip
+writeSkip
+commits
+rollbacks
+```
+
+### SkipListener
+
+Registra información de los registros omitidos y el motivo del rechazo.
+
+Ejemplo:
+
+```text
+id
+tipo
+monto
+fase del procesamiento
+motivo
+```
+
+La pauta también considera explícitamente el uso de logs para evaluar el rendimiento y estabilidad del entorno batch. :contentReference[oaicite:2]{index=2}
+
+---
+
+## Procesamiento paralelo
+
+Los Steps principales utilizan:
+
+```java
+chunk(5)
+```
+
+y un `ThreadPoolTaskExecutor` configurado con:
+
+```text
+corePoolSize = 3
+maxPoolSize  = 3
+```
+
+De esta forma, los registros pueden ser procesados utilizando:
+
+```text
+batch-thread-1
+batch-thread-2
+batch-thread-3
+```
+
+El `TaskExecutor` es compartido por los tres procesos.
+
+Los Readers utilizan `SynchronizedItemStreamReader` para sincronizar el acceso al archivo durante la ejecución concurrente.
+
+Además, se utiliza:
+
+```java
+saveState(false)
+```
+
+privilegiando la reejecución completa e idempotente del archivo frente a la recuperación desde un offset intermedio.
 
 ---
 
 ## Persistencia e idempotencia
 
-Los resultados procesados son almacenados en PostgreSQL.
+Los resultados son almacenados en PostgreSQL.
 
-Para permitir la reejecución de los Jobs sin duplicar registros se utilizan restricciones de clave primaria y operaciones:
+Las tablas de detalle utilizan restricciones relacionales junto con:
 
 ```sql
-ON CONFLICT ... DO NOTHING
+ON CONFLICT (...) DO NOTHING
 ```
 
-Esta estrategia entrega una solución simple de idempotencia utilizando las capacidades de la base de datos relacional, sin incorporar mecanismos adicionales de hashing o deduplicación.
+para evitar duplicados.
 
-Para las tablas de resumen se utiliza actualización ante conflicto cuando corresponde, permitiendo recalcular los resultados derivados sin generar registros duplicados.
+Las tablas derivadas utilizan:
+
+```sql
+ON CONFLICT (...) DO UPDATE
+```
+
+permitiendo recalcular los resúmenes.
+
+No se utilizan mecanismos adicionales de hashing o deduplicación.
 
 ---
 
 ## Configuración de PostgreSQL
 
-La conexión se configura en:
+Crear la base de datos:
+
+```bash
+createdb bank_legacy
+```
+
+Crear las tablas:
+
+```bash
+psql bank_legacy < database/schema.sql
+```
+
+La conexión se encuentra en:
 
 ```text
 src/main/resources/application.properties
 ```
 
-Ejemplo:
+Spring Batch inicializa además sus tablas de metadatos mediante:
 
 ```properties
-spring.datasource.url=jdbc:postgresql://localhost:5432/bank_legacy
-spring.datasource.username=matiaszuniga
-
 spring.batch.jdbc.initialize-schema=always
-```
-
-El esquema de las tablas utilizadas por los Jobs se encuentra versionado en:
-
-```text
-database/schema.sql
 ```
 
 ---
 
 ## Ejecución
 
-### 1. Crear la base de datos
-
-El proyecto utiliza PostgreSQL. Primero se debe crear la base de datos:
-
-```bash
-createdb bank_legacy
-```
-
-Luego se crean las tablas necesarias utilizando el esquema incluido en el repositorio:
-
-```bash
-psql bank_legacy < database/schema.sql
-```
-
-Spring Batch crea sus propias tablas de metadatos al iniciar la aplicación mediante:
-
-```properties
-spring.batch.jdbc.initialize-schema=always
-```
-
-### 2. Seleccionar el Job
-
-Existen tres Jobs independientes.
-
-En:
-
-```text
-src/main/resources/application.properties
-```
-
-se debe descomentar únicamente el Job que se desea ejecutar:
+Antes de ejecutar se debe descomentar únicamente el Job requerido:
 
 ```properties
 # spring.batch.job.name=transactionJob
@@ -282,41 +421,25 @@ se debe descomentar únicamente el Job que se desea ejecutar:
 # spring.batch.job.name=statementJob
 ```
 
-Por ejemplo, para ejecutar Transaction:
+Por ejemplo:
 
 ```properties
 spring.batch.job.name=transactionJob
 ```
 
-### 3. Ejecutar el Job
-
-Desde la raíz del proyecto:
+Luego:
 
 ```bash
-mvn spring-boot:run -Dspring-boot.run.arguments="run.id=10"
+mvn spring-boot:run -Dspring-boot.run.arguments="run.id=60"
 ```
 
-El parámetro `run.id` permite identificar una nueva instancia de ejecución del Job.
-
-Spring Batch registra la ejecución de cada Job y sus Steps en sus tablas de metadatos.
-
----
-
-## Tablas generadas
-
-Los procesos almacenan sus resultados en las siguientes tablas:
-
-| Job | Tabla principal | Tabla derivada |
-|---|---|---|
-| Transaction | `transacciones` | `resumen_transacciones_diarias` |
-| Interest | `intereses` | - |
-| Statement | `estados_cuenta` | `resumen_anual` |
+El parámetro `run.id` permite ejecutar una nueva instancia del Job.
 
 ---
 
 ## Evidencias
 
-Las evidencias de ejecución se encuentran en:
+Las evidencias se encuentran en:
 
 ```text
 docs/evidencias/
@@ -324,7 +447,21 @@ docs/evidencias/
 
 ### Transaction Job
 
+Ejecución normal utilizando chunks y tres hilos:
+
 ![Transaction Job](docs/evidencias/transaction-job.png)
+
+### Transaction - tolerancia a fallos
+
+Se modificó temporalmente un registro para utilizar el tipo:
+
+```text
+transferencia
+```
+
+El `TransactionProcessor` genera una excepción personalizada, el registro es omitido mediante `skip`, el `SkipListener` registra el motivo y el Job continúa hasta finalizar correctamente.
+
+![Transaction Skip](docs/evidencias/transaction-skip.png)
 
 ### Interest Job
 
@@ -334,4 +471,34 @@ docs/evidencias/
 
 ![Statement Job](docs/evidencias/statement-job.png)
 
-Cada evidencia muestra la ejecución satisfactoria del Job y los resultados persistidos en PostgreSQL.
+Las ejecuciones muestran procesamiento concurrente mediante:
+
+```text
+batch-thread-1
+batch-thread-2
+batch-thread-3
+```
+
+junto con métricas de lectura, escritura, skips, commits y rollbacks.
+
+---
+
+## Resultado
+
+La versión de Semana 2 mantiene los tres procesos batch desarrollados previamente e incorpora mecanismos de resiliencia, seguimiento y escalamiento.
+
+Se implementaron:
+
+```text
+✓ chunks de tamaño 5
+✓ 3 hilos paralelos
+✓ excepciones personalizadas
+✓ skip específico
+✓ retry para errores transitorios
+✓ SkipListener
+✓ StepExecutionListener
+✓ JobExecutionListener
+✓ logs y métricas
+✓ Readers sincronizados
+✓ persistencia idempotente
+```

@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS intereses (
     cuenta_id BIGINT PRIMARY KEY,
     nombre VARCHAR(255) NOT NULL,
     saldo NUMERIC(15,2) NOT NULL,
+    edad INTEGER NOT NULL,
     tipo VARCHAR(50) NOT NULL,
     interes NUMERIC(15,2) NOT NULL,
     saldo_final NUMERIC(15,2) NOT NULL,
@@ -52,15 +53,18 @@ CREATE TABLE IF NOT EXISTS intereses (
 -- =========================================================
 
 CREATE TABLE IF NOT EXISTS estados_cuenta (
+    id SERIAL PRIMARY KEY,
     cuenta_id BIGINT NOT NULL,
     fecha DATE NOT NULL,
-    transaccion VARCHAR(50) NOT NULL,
+    transaccion VARCHAR(100) NOT NULL,
     monto NUMERIC(15,2) NOT NULL,
-    movimiento VARCHAR(50) NOT NULL,
-    anomalia BOOLEAN NOT NULL,
+    descripcion VARCHAR(255),
+    movimiento VARCHAR(50),
+    anomalia BOOLEAN,
     motivo VARCHAR(255),
 
-    PRIMARY KEY (cuenta_id, fecha, transaccion, monto)
+    CONSTRAINT uq_estado_cuenta
+        UNIQUE (cuenta_id, fecha, transaccion, monto)
 );
 
 

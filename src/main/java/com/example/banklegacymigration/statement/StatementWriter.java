@@ -34,7 +34,7 @@ public class StatementWriter
                         motivo
                     )
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT (cuenta_id, fecha, transaccion)
+                    ON CONFLICT (cuenta_id, fecha, transaccion, monto)
                     DO NOTHING
                     """,
                     statement.getCuentaId(),
