@@ -61,13 +61,39 @@ bank-legacy-migration/
 │       ├── transaction-job.png
 │       ├── transaction-skip.png
 │       ├── interest-job.png
-│       └── statement-job.png
+│       ├── statement-job.png
+│       ├── s3-01-transaction-particionado.png
+│       ├── s3-02-fault-tolerance.png
+│       ├── s3-03-persistencia-anomalias.png
+│       ├── s3-04-resumenes.png
+│       ├── s3-05-configuracion-versionamiento.png
+│       └── s3-06-comparacion-rendimiento.png
 │
 ├── src/main/java/com/example/banklegacymigration/
 │   ├── config/
 │   ├── transaction/
+│   │   ├── Transaction.java
+│   │   ├── TransactionReader.java
+│   │   ├── TransactionProcessor.java
+│   │   ├── TransactionWriter.java
+│   │   ├── TransactionPartitioner.java
+│   │   └── TransactionJobConfig.java
+│   │
 │   ├── interest/
+│   │   ├── InterestAccount.java
+│   │   ├── InterestReader.java
+│   │   ├── InterestProcessor.java
+│   │   ├── InterestWriter.java
+│   │   ├── InterestPartitioner.java
+│   │   └── InterestJobConfig.java
+│   │
 │   └── statement/
+│       ├── AnnualStatement.java
+│       ├── StatementReader.java
+│       ├── StatementProcessor.java
+│       ├── StatementWriter.java
+│       ├── StatementPartitioner.java
+│       └── StatementJobConfig.java
 │
 ├── src/main/resources/
 │   └── application.properties
