@@ -1,6 +1,8 @@
 package com.example.banklegacymigration.bff.common.service;
 
 import com.example.banklegacymigration.bff.common.model.Account;
+import com.example.banklegacymigration.bff.common.model.AccountMovement;
+import com.example.banklegacymigration.bff.common.repository.AccountMovementRepository;
 import com.example.banklegacymigration.bff.common.repository.AccountRepository;
 import org.springframework.stereotype.Service;
 
@@ -11,9 +13,13 @@ import java.util.Optional;
 public class AccountService {
 
     private final AccountRepository accountRepository;
+    private final AccountMovementRepository accountMovementRepository;
 
-    public AccountService(AccountRepository accountRepository) {
+    public AccountService(
+            AccountRepository accountRepository,
+            AccountMovementRepository accountMovementRepository) {
         this.accountRepository = accountRepository;
+        this.accountMovementRepository = accountMovementRepository;
     }
 
     public List<Account> getAccounts() {
@@ -22,5 +28,9 @@ public class AccountService {
 
     public Optional<Account> getAccount(Long cuentaId) {
         return accountRepository.findById(cuentaId);
+    }
+
+    public List<AccountMovement> getMovements(Long cuentaId) {
+        return accountMovementRepository.findByAccountId(cuentaId);
     }
 }

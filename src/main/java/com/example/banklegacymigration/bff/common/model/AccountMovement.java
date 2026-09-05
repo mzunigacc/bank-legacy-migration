@@ -5,7 +5,6 @@ import java.time.LocalDate;
 
 public class AccountMovement {
 
-    private Long id;
     private Long cuentaId;
     private LocalDate fecha;
     private String transaccion;
@@ -14,24 +13,18 @@ public class AccountMovement {
     private String movimiento;
 
     public AccountMovement(
-            Long id,
             Long cuentaId,
             LocalDate fecha,
             String transaccion,
             BigDecimal monto,
             String descripcion,
             String movimiento) {
-        this.id = id;
         this.cuentaId = cuentaId;
         this.fecha = fecha;
         this.transaccion = transaccion;
         this.monto = monto;
         this.descripcion = descripcion;
         this.movimiento = movimiento;
-    }
-
-    public Long getId() {
-        return id;
     }
 
     public Long getCuentaId() {

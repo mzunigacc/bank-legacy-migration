@@ -1,6 +1,7 @@
 package com.example.banklegacymigration.bff.web.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public class WebAccountDetailResponse {
 
@@ -10,6 +11,7 @@ public class WebAccountDetailResponse {
     private String tipo;
     private BigDecimal saldo;
     private BigDecimal interesGenerado;
+    private List<WebMovementResponse> movimientos;
 
     public WebAccountDetailResponse(
             Long cuentaId,
@@ -17,13 +19,15 @@ public class WebAccountDetailResponse {
             Integer edad,
             String tipo,
             BigDecimal saldo,
-            BigDecimal interesGenerado) {
+            BigDecimal interesGenerado,
+            List<WebMovementResponse> movimientos) {
         this.cuentaId = cuentaId;
         this.titular = titular;
         this.edad = edad;
         this.tipo = tipo;
         this.saldo = saldo;
         this.interesGenerado = interesGenerado;
+        this.movimientos = movimientos;
     }
 
     public Long getCuentaId() {
@@ -48,5 +52,9 @@ public class WebAccountDetailResponse {
 
     public BigDecimal getInteresGenerado() {
         return interesGenerado;
+    }
+
+    public List<WebMovementResponse> getMovimientos() {
+        return movimientos;
     }
 }
