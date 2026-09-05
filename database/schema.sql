@@ -80,3 +80,11 @@ CREATE TABLE IF NOT EXISTS resumen_anual (
     saldo_neto NUMERIC(15,2) NOT NULL,
     cantidad_anomalias INTEGER NOT NULL
 );
+
+-- Tabla para retiros agregada para S4, Exp 2
+CREATE TABLE IF NOT EXISTS retiros_atm (
+    id BIGSERIAL PRIMARY KEY,
+    cuenta_id BIGINT NOT NULL,
+    fecha_hora TIMESTAMP NOT NULL,
+    monto NUMERIC(15,2) NOT NULL
+);
