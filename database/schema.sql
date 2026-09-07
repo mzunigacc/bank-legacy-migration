@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS resumen_transacciones_diarias (
 
 CREATE TABLE IF NOT EXISTS intereses (
     cuenta_id BIGINT PRIMARY KEY,
-    nombre VARCHAR(255) NOT NULL,
+    nombre VARCHAR(150) NOT NULL,
     saldo NUMERIC(15,2) NOT NULL,
     edad INTEGER NOT NULL,
     tipo VARCHAR(50) NOT NULL,
@@ -53,15 +53,17 @@ CREATE TABLE IF NOT EXISTS intereses (
 -- =========================================================
 
 CREATE TABLE IF NOT EXISTS estados_cuenta (
-    id SERIAL PRIMARY KEY,
     cuenta_id BIGINT NOT NULL,
     fecha DATE NOT NULL,
-    transaccion VARCHAR(100) NOT NULL,
+    transaccion VARCHAR(50) NOT NULL,
     monto NUMERIC(15,2) NOT NULL,
     descripcion VARCHAR(255),
-    movimiento VARCHAR(50),
-    anomalia BOOLEAN,
+    movimiento VARCHAR(50) NOT NULL,
+    anomalia BOOLEAN NOT NULL,
     motivo VARCHAR(255),
+
+    CONSTRAINT estados_cuenta_pkey
+        PRIMARY KEY (cuenta_id, fecha, transaccion),
 
     CONSTRAINT uq_estado_cuenta
         UNIQUE (cuenta_id, fecha, transaccion, monto)
@@ -81,7 +83,11 @@ CREATE TABLE IF NOT EXISTS resumen_anual (
     cantidad_anomalias INTEGER NOT NULL
 );
 
--- Tabla para retiros agregada para S4, Exp 2
+
+-- =========================================================
+-- 6. RETIROS ATM - SEMANA 4 / EXPERIENCIA 2
+-- =========================================================
+
 CREATE TABLE IF NOT EXISTS retiros_atm (
     id BIGSERIAL PRIMARY KEY,
     cuenta_id BIGINT NOT NULL,
