@@ -1,0 +1,723 @@
+{
+  "info": {
+    "_postman_id": "banco-xyz-bff",
+    "name": "Banco XYZ BFF",
+    "description": "Colección de pruebas para los BFF Web, Mobile y ATM del proyecto Banco XYZ.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Web",
+      "item": [
+        {
+          "name": "Cuenta 101 - autorizado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{web_user}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{web_password}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/web/cuentas/101",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "web",
+                "cuentas",
+                "101"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Respuesta web contiene información completa\", function () {",
+                  "    const json = pm.response.json();",
+                  "",
+                  "    pm.expect(json).to.have.property(\"cuentaId\");",
+                  "    pm.expect(json).to.have.property(\"titular\");",
+                  "    pm.expect(json).to.have.property(\"edad\");",
+                  "    pm.expect(json).to.have.property(\"tipo\");",
+                  "    pm.expect(json).to.have.property(\"saldo\");",
+                  "    pm.expect(json).to.have.property(\"interesGenerado\");",
+                  "    pm.expect(json).to.have.property(\"movimientos\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cuenta 999 - no encontrada",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{web_user}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{web_password}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/web/cuentas/999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "web",
+                "cuentas",
+                "999"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Mobile",
+      "item": [
+        {
+          "name": "Cuenta 101 - autorizado",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{mobile_user}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{mobile_password}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mobile/cuentas/101",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "cuentas",
+                "101"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Respuesta mobile es liviana\", function () {",
+                  "    const json = pm.response.json();",
+                  "",
+                  "    pm.expect(json).to.have.property(\"cuentaId\");",
+                  "    pm.expect(json).to.have.property(\"saldo\");",
+                  "    pm.expect(json).to.have.property(\"ultimosMovimientos\");",
+                  "",
+                  "    pm.expect(json).to.not.have.property(\"titular\");",
+                  "    pm.expect(json).to.not.have.property(\"edad\");",
+                  "    pm.expect(json).to.not.have.property(\"interesGenerado\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cuenta 999 - no encontrada",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{mobile_user}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{mobile_password}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mobile/cuentas/999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "cuentas",
+                "999"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ATM",
+      "item": [
+        {
+          "name": "Consultar saldo",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{atm_user}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{atm_password}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/atm/cuentas/101/saldo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "atm",
+                "cuentas",
+                "101",
+                "saldo"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Respuesta contiene saldo disponible\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property(\"cuentaId\");",
+                  "    pm.expect(json).to.have.property(\"saldoDisponible\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Retiro válido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{atm_user}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{atm_password}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"monto\": 1\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/atm/cuentas/101/retiros",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "atm",
+                "cuentas",
+                "101",
+                "retiros"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Retiro aprobado\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.estado).to.eql(\"APROBADO\");",
+                  "    pm.expect(json.montoRetirado).to.eql(1);",
+                  "    pm.expect(json).to.have.property(\"saldoDisponible\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Retiro monto inválido",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{atm_user}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{atm_password}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"monto\": 0\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/atm/cuentas/101/retiros",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "atm",
+                "cuentas",
+                "101",
+                "retiros"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test(\"Mensaje de monto inválido\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error).to.eql(\"El monto del retiro debe ser mayor que cero\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Retiro cuenta inexistente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{atm_user}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{atm_password}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"monto\": 100\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/atm/cuentas/999/retiros",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "atm",
+                "cuentas",
+                "999",
+                "retiros"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"Mensaje de cuenta inexistente\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error).to.eql(\"Cuenta no encontrada: 999\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Retiro saldo insuficiente",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{atm_user}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{atm_password}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"monto\": 100000\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/atm/cuentas/101/retiros",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "atm",
+                "cuentas",
+                "101",
+                "retiros"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test(\"Mensaje de saldo insuficiente\", function () {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.error).to.eql(\"Saldo insuficiente\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Seguridad",
+      "item": [
+        {
+          "name": "Web sin credenciales",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/web/cuentas/101",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "web",
+                "cuentas",
+                "101"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Web con usuario ATM",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{atm_user}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{atm_password}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/web/cuentas/101",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "web",
+                "cuentas",
+                "101"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mobile con usuario Web",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{web_user}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{web_password}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/mobile/cuentas/101",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "mobile",
+                "cuentas",
+                "101"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "ATM con usuario Mobile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{mobile_user}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{mobile_password}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/atm/cuentas/101/saldo",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "atm",
+                "cuentas",
+                "101",
+                "saldo"
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", function () {",
+                  "    pm.response.to.have.status(403);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
