@@ -14,9 +14,9 @@
     </parent>
 
     <groupId>com.example</groupId>
-    <artifactId>bank-legacy-migration</artifactId>
+    <artifactId>bank-bff</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>bank-legacy-migration</name>
+    <name>bank-bff</name>
 
     <properties>
         <java.version>17</java.version>
@@ -25,14 +25,14 @@
     <dependencies>
 
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-batch</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
 
         <dependency>
