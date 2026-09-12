@@ -1,0 +1,3 @@
+WEB | HTTP 200 | bytes 294 | tiempo 0.133249s
+MOBILE | HTTP 200 | bytes 133 | tiempo 0.055191s
+ATM | HTTP 200 | bytes 42 | tiempo 0.045381s

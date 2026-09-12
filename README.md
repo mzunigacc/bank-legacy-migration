@@ -1,279 +1,632 @@
-# Bank Legacy Migration - Semana 4
+# Banco XYZ — Backend for Frontend (BFF)
 
-Proyecto desarrollado para **Desarrollo Backend III (PBY2203)** utilizando Java, Spring Boot y PostgreSQL.
+Proyecto desarrollado para la asignatura **Desarrollo Backend III**, a partir del sistema de migración de datos legacy de Banco XYZ.
 
-El proyecto comenzó como una modernización de procesos batch del sistema legacy del Banco XYZ. Durante la Semana 4 se extiende la solución mediante el patrón **Backend for Frontend (BFF)**, implementando APIs diferenciadas para clientes Web, Mobile y ATM.
-
----
-
-## Tecnologías
-
-- Java 17
-- Spring Boot 3
-- Spring Batch
-- Spring Web
-- Spring Security
-- PostgreSQL
-- Maven
-- Postman
-- Git / GitHub
+La solución implementa una arquitectura **Backend for Frontend (BFF)** con backends independientes para los canales **Web, Mobile y ATM**, permitiendo adaptar las respuestas, seguridad y operaciones a las necesidades particulares de cada cliente.
 
 ---
 
-## Arquitectura BFF
+## 1. Objetivo
 
-Para Semana 4 se seleccionó una estrategia de **endpoints y capas específicas por frontend dentro de una aplicación Spring Boot compartida**.
+Implementar una estrategia Backend for Frontend para Banco XYZ que permita:
 
-Cada canal mantiene sus propios controllers, services y DTOs, mientras que el acceso a los datos se reutiliza mediante una capa común.
+- disponer de un BFF independiente para Web;
+- disponer de un BFF independiente para Mobile;
+- disponer de un BFF independiente para ATM;
+- adaptar los datos entregados según las necesidades de cada canal;
+- reducir información innecesaria en clientes con requerimientos más acotados;
+- implementar autenticación y autorización mediante JWT;
+- restringir cada BFF al rol correspondiente a su canal;
+- proteger los BFF mediante HTTPS;
+- mantener la lógica de negocio y persistencia separada de la adaptación realizada por los BFF.
+
+La arquitectura continúa el trabajo realizado durante las semanas anteriores, manteniendo además el procesamiento Batch como un componente independiente.
+
+---
+
+## 2. Arquitectura
+
+La solución final está compuesta por cinco aplicaciones principales:
 
 ```text
-                    PostgreSQL
-                        │
-                        ▼
-                   BFF Common
-                        │
-             ┌──────────┼──────────┐
-             ▼          ▼          ▼
-          Web BFF   Mobile BFF   ATM BFF
+                    ┌─────────────────────┐
+Web ── HTTPS/JWT ──▶│       BFF Web       │ :8441
+                    └──────────┬──────────┘
+                               │
+                    ┌──────────▼──────────┐
+Mobile ─HTTPS/JWT──▶│     BFF Mobile      │ :8442
+                    └──────────┬──────────┘
+                               │
+                    ┌──────────▼──────────┐
+ATM ─── HTTPS/JWT ─▶│       BFF ATM       │ :8443
+                    └──────────┬──────────┘
+                               │
+                               │ HTTP interno
+                               ▼
+                    ┌─────────────────────┐
+                    │      Bank Core      │ :8080
+                    │ negocio + JPA       │
+                    └──────────┬──────────┘
+                               │
+                               ▼
+                         PostgreSQL
 ```
 
-Esta estrategia permite mantener separada la lógica específica de cada cliente sin duplicar innecesariamente el acceso a datos y la infraestructura del proyecto.
+Los tres BFF son aplicaciones Spring Boot independientes y no acceden directamente a PostgreSQL.
+
+`bank-core` centraliza la lógica bancaria y el acceso a datos, mientras que cada BFF se concentra en adaptar la API a las necesidades de su canal.
+
+El módulo `batch` permanece separado de la capa BFF y conserva la responsabilidad sobre los procesos Batch desarrollados durante las semanas anteriores.
 
 ---
 
-## BFF Web
+## 3. Estructura del proyecto
 
-El BFF Web está orientado a interfaces que requieren información completa.
+```text
+bank-legacy-migration/
+│
+├── batch/
+│   └── procesos Spring Batch
+│
+├── bank-core/
+│   └── lógica bancaria, persistencia JPA y API interna
+│
+├── bff-web/
+│   └── Backend for Frontend para canal Web
+│
+├── bff-mobile/
+│   └── Backend for Frontend para canal Mobile
+│
+├── bff-atm/
+│   └── Backend for Frontend para canal ATM
+│
+├── database/
+│   └── scripts asociados a PostgreSQL
+│
+├── data/
+├── docs/
+├── exploration/
+│
+├── evidencias_ejecucion/
+│   └── evidencias de pruebas y ejecución
+│
+└── README.md
+```
+
+---
+
+## 4. Responsabilidades por componente
+
+### Bank Core
+
+`bank-core` funciona como backend especializado y concentra:
+
+- acceso a PostgreSQL mediante Spring Data JPA;
+- consulta de cuentas;
+- consulta de movimientos;
+- lógica de retiros;
+- actualización de saldos;
+- registro persistente de retiros;
+- manejo de errores asociados a operaciones bancarias.
+
+Los BFF consumen esta API interna mediante HTTP y no contienen acceso directo a la base de datos.
+
+### BFF Web
+
+El canal Web entrega una representación más completa de la cuenta, adecuada para interfaces con mayor capacidad de visualización.
+
+Incluye información como:
+
+- identificador de cuenta;
+- titular;
+- edad;
+- tipo de cuenta;
+- saldo;
+- interés generado;
+- movimientos y sus descripciones.
+
+### BFF Mobile
+
+El canal Mobile reduce la cantidad de información enviada al cliente.
+
+Entrega principalmente:
+
+- identificador de cuenta;
+- saldo;
+- últimos movimientos.
+
+Para disminuir el payload, la respuesta limita la información de movimientos a los datos esenciales requeridos por el cliente móvil.
+
+### BFF ATM
+
+El canal ATM utiliza respuestas mínimas orientadas a operaciones críticas.
+
+Permite:
+
+- consultar saldo disponible;
+- realizar retiros.
+
+La lógica bancaria del retiro permanece en `bank-core`; el BFF ATM se encarga de exponer y adaptar la operación para este canal.
+
+---
+
+## 5. Optimización por canal
+
+La estrategia BFF permite entregar representaciones diferentes de una misma cuenta según las necesidades del cliente.
+
+Durante las pruebas locales se obtuvieron los siguientes tamaños de respuesta:
+
+| Canal | HTTP | Tamaño de respuesta |
+|---|---:|---:|
+| Web | 200 | 294 bytes |
+| Mobile | 200 | 133 bytes |
+| ATM | 200 | 42 bytes |
+
+En la ejecución registrada:
+
+- Mobile redujo aproximadamente un **55 %** el tamaño respecto de Web.
+- ATM redujo aproximadamente un **86 %** el tamaño respecto de Web.
+- ATM redujo aproximadamente un **68 %** el tamaño respecto de Mobile.
+
+Los tiempos observados durante una ejecución local fueron:
+
+| Canal | Tiempo observado |
+|---|---:|
+| Web | 0.078947 s |
+| Mobile | 0.050789 s |
+| ATM | 0.029518 s |
+
+Estos tiempos corresponden a una ejecución local y pueden variar entre ejecuciones. La diferencia de tamaño, en cambio, responde directamente al diseño de los DTO específicos de cada BFF.
+
+![Comparación de respuestas](evidencias_ejecucion/06_optimizacion_respuestas.png)
+
+---
+
+## 6. Seguridad
+
+### HTTPS
+
+Los tres BFF exponen sus APIs mediante HTTPS:
+
+```text
+Web     https://localhost:8441
+Mobile  https://localhost:8442
+ATM     https://localhost:8443
+```
+
+Para el entorno académico/local se utiliza un certificado autofirmado en formato PKCS12.
+
+El certificado permite probar comunicación mediante TLS en los tres BFF. Al tratarse de un certificado autofirmado, herramientas como Postman o `curl` deben aceptar explícitamente el certificado local.
+
+En `curl`, las pruebas locales utilizan la opción:
+
+```bash
+-k
+```
+
+> El certificado y su configuración corresponden exclusivamente al entorno de desarrollo académico. En un entorno productivo se deben utilizar certificados emitidos y administrados mediante mecanismos apropiados para producción.
+
+### JWT
+
+La autenticación se implementa mediante JSON Web Tokens (JWT) firmados con HS256.
+
+Cada token contiene un rol asociado al canal:
+
+```text
+ROLE_WEB
+ROLE_MOBILE
+ROLE_ATM
+```
+
+Cada BFF autoriza exclusivamente el rol correspondiente.
+
+La matriz esperada es:
+
+| Solicitud | Resultado |
+|---|---:|
+| Token correspondiente al canal | `200 OK` |
+| Sin token o token inválido | `401 Unauthorized` |
+| Token válido de otro canal | `403 Forbidden` |
+
+Por ejemplo:
+
+```text
+JWT WEB    → BFF Web    → 200
+sin JWT    → BFF Web    → 401
+JWT ATM    → BFF Web    → 403
+
+JWT MOBILE → BFF Mobile → 200
+JWT WEB    → BFF Mobile → 403
+
+JWT ATM    → BFF ATM    → 200
+```
+
+La siguiente evidencia muestra autenticación y autorización en el canal Web:
+
+![Seguridad BFF Web](evidencias_ejecucion/02_web_https_autenticacion_autorizacion.png)
+
+En Mobile se verifica además que un JWT válido perteneciente a otro canal obtiene `403 Forbidden`:
+
+![Seguridad BFF Mobile](evidencias_ejecucion/03_mobile_https_autorizacion.png)
+
+---
+
+## 7. Endpoints
+
+### Web
+
+#### Consultar cuenta
 
 ```http
 GET /api/web/cuentas/{cuentaId}
 ```
 
-Entrega información de la cuenta, titular, saldo, interés generado y movimientos.
+Ejemplo:
 
-![Web BFF](docs/evidencias/s4-web-bff.png)
+```text
+https://localhost:8441/api/web/cuentas/101
+```
+
+Requiere:
+
+```text
+ROLE_WEB
+```
 
 ---
 
-## BFF Mobile
+### Mobile
 
-El BFF Mobile entrega una respuesta reducida para disminuir la cantidad de información transferida.
+#### Consultar cuenta
 
 ```http
 GET /api/mobile/cuentas/{cuentaId}
 ```
 
-La respuesta contiene únicamente el identificador de cuenta, saldo y últimos movimientos con fecha y monto.
+Ejemplo:
 
-La batería Postman verifica además que la respuesta Mobile no incluya campos exclusivos del BFF Web.
+```text
+https://localhost:8442/api/mobile/cuentas/101
+```
 
-![Mobile BFF](docs/evidencias/s4-mobile-bff.png)
+Requiere:
+
+```text
+ROLE_MOBILE
+```
 
 ---
 
-## BFF ATM
+### ATM
 
-El BFF ATM está orientado a operaciones bancarias específicas.
-
-### Consulta de saldo
+#### Consultar saldo
 
 ```http
 GET /api/atm/cuentas/{cuentaId}/saldo
 ```
 
-### Retiro
+Ejemplo:
+
+```text
+https://localhost:8443/api/atm/cuentas/101/saldo
+```
+
+#### Realizar retiro
 
 ```http
 POST /api/atm/cuentas/{cuentaId}/retiros
 ```
 
-Ejemplo:
+Ejemplo de body:
 
 ```json
 {
-  "monto": 100
+  "monto": 10
 }
 ```
 
-Para ejecutar un retiro se valida la existencia de la cuenta, que el monto sea mayor que cero y que exista saldo suficiente.
+Requiere:
 
-Una operación aprobada actualiza el saldo y registra el retiro en `retiros_atm`. Ambas acciones se ejecutan dentro de una transacción mediante `@Transactional`.
+```text
+ROLE_ATM
+```
 
-| Caso | HTTP |
-|---|---:|
-| Operación correcta | 200 |
-| Monto inválido | 400 |
-| Cuenta inexistente | 404 |
-| Saldo insuficiente | 409 |
+La ejecución de una consulta de saldo y un retiro válido se encuentra documentada en:
 
-![ATM BFF](docs/evidencias/s4-atm-bff.png)
+![Operaciones ATM](evidencias_ejecucion/04_atm_https_saldo_retiro.png)
 
 ---
 
-## Seguridad por canal
+## 8. Validación de operaciones ATM
 
-Los BFF están protegidos mediante **Spring Security y HTTP Basic Authentication**.
+Las solicitudes de retiro utilizan Jakarta Validation antes de enviar la operación a Bank Core.
 
-```text
-/api/web/**     → ROLE_WEB
-/api/mobile/**  → ROLE_MOBILE
-/api/atm/**     → ROLE_ATM
+Ejemplos de validación:
+
+```json
+{
+  "monto": 0
+}
 ```
 
-Credenciales utilizadas exclusivamente para esta actividad académica:
+produce:
 
-| Canal | Usuario | Contraseña |
-|---|---|---|
-| Web | `web_user` | `web_pass` |
-| Mobile | `mobile_user` | `mobile_pass` |
-| ATM | `atm_user` | `atm_pass` |
+```text
+400 Bad Request
+```
 
-Un usuario autenticado no puede acceder a un BFF correspondiente a otro canal.
+con:
 
-![Seguridad BFF](docs/evidencias/s4-security-bff.png)
+```json
+{
+  "error": "El monto debe ser mayor a cero"
+}
+```
+
+También se manejan respuestas asociadas a situaciones como:
+
+- cuenta inexistente;
+- saldo insuficiente;
+- monto inválido.
+
+Evidencia de validación:
+
+![Validación ATM](evidencias_ejecucion/05_atm_validacion_monto.png)
 
 ---
 
-## Estructura principal
+## 9. Requisitos para ejecución
 
-```text
-bank-legacy-migration/
-├── data/
-├── database/
-│   └── schema.sql
-├── docs/
-│   ├── propuesta-tecnica-s4.md
-│   └── evidencias/
-├── src/main/java/com/example/banklegacymigration/
-│   ├── bff/
-│   │   ├── atm/
-│   │   ├── common/
-│   │   ├── mobile/
-│   │   ├── security/
-│   │   └── web/
-│   ├── config/
-│   ├── interest/
-│   ├── statement/
-│   └── transaction/
-├── src/main/resources/
-│   └── application.properties
-├── banco-xyz-bff.postman_collection.json
-├── banco-xyz-local.postman_environment.json
-└── pom.xml
-```
+Para ejecutar el proyecto localmente se requiere:
 
-Los paquetes `transaction`, `interest` y `statement` corresponden a los procesos Spring Batch desarrollados durante las semanas anteriores.
+- Java 17;
+- Maven;
+- PostgreSQL;
+- base de datos `bank_legacy` configurada;
+- puertos `8080`, `8441`, `8442` y `8443` disponibles.
 
 ---
 
-## Base de datos
+## 10. Ejecución
 
-El proyecto utiliza PostgreSQL con la base:
+Las aplicaciones deben ejecutarse en terminales independientes.
 
-```text
-bank_legacy
-```
-
-El esquema reproducible se encuentra en:
-
-```text
-database/schema.sql
-```
-
-Semana 4 incorpora la tabla `retiros_atm` para registrar los retiros realizados desde el BFF ATM.
-
-Los tres canales utilizan una fuente de datos común. Por ejemplo, un retiro realizado desde ATM modifica `saldo_final`, por lo que el nuevo saldo puede ser consultado posteriormente desde Web, Mobile o ATM.
-
----
-
-## Ejecución
-
-### 1. Crear la base de datos
+### 10.1 Bank Core
 
 ```bash
-createdb bank_legacy
+cd bank-core
+mvn spring-boot:run
 ```
 
-### 2. Crear las tablas
-
-```bash
-psql -d bank_legacy -f database/schema.sql
-```
-
-### 3. Compilar
-
-```bash
-mvn clean compile
-```
-
-### 4. Ejecutar las APIs
-
-```bash
-mvn spring-boot:run -Dspring-boot.run.arguments="--spring.batch.job.enabled=false"
-```
-
-La aplicación queda disponible en:
+Disponible en:
 
 ```text
 http://localhost:8080
 ```
 
----
+### 10.2 BFF Web
 
-## Pruebas Postman
-
-El repositorio incluye:
-
-```text
-banco-xyz-bff.postman_collection.json
-banco-xyz-local.postman_environment.json
+```bash
+cd bff-web
+mvn spring-boot:run
 ```
 
-Para ejecutar las pruebas:
-
-1. importar ambos archivos en Postman;
-2. seleccionar el Environment `Banco XYZ - Local`;
-3. iniciar la aplicación Spring Boot;
-4. ejecutar la colección `Banco XYZ BFF`.
-
-La batería valida los BFF Web, Mobile y ATM, casos de error y controles de autenticación y autorización.
-
-### Resultado
+Disponible en:
 
 ```text
-20 tests ejecutados
-20 aprobados
-0 fallidos
-0 errores
+https://localhost:8441
 ```
 
-![Postman Collection Runner](docs/evidencias/s4-postman-runner.png)
+### 10.3 BFF Mobile
 
----
+```bash
+cd bff-mobile
+mvn spring-boot:run
+```
 
-## Continuidad del proyecto
-
-La solución conserva las funcionalidades construidas previamente:
-
-- **Semana 1:** procesamiento de transacciones, intereses y estados de cuenta mediante Spring Batch y PostgreSQL.
-- **Semana 2:** manejo de excepciones, `skip`, `retry`, listeners y procesamiento por chunks.
-- **Semana 3:** particionamiento, ejecución paralela, configuración externalizada e idempotencia.
-- **Semana 4:** arquitectura BFF diferenciada para Web, Mobile y ATM, seguridad por canal y pruebas automatizadas de API.
-
-Las versiones entregadas durante las semanas anteriores permanecen disponibles mediante el historial y los tags del repositorio Git.
-
----
-
-## Propuesta técnica
-
-La estrategia arquitectónica y las principales decisiones de implementación de Semana 4 se documentan en:
+Disponible en:
 
 ```text
-docs/propuesta-tecnica-s4.md
+https://localhost:8442
+```
+
+### 10.4 BFF ATM
+
+```bash
+cd bff-atm
+mvn spring-boot:run
+```
+
+Disponible en:
+
+```text
+https://localhost:8443
 ```
 
 ---
 
-## Resultado Semana 4
+## 11. Generación de tokens para pruebas
 
-La implementación incorpora BFF diferenciados para Web, Mobile y ATM, una capa común de acceso a datos, seguridad específica por canal, retiros transaccionales, manejo de errores HTTP y una batería automatizada de 20 pruebas.
+Para las pruebas locales se incluyen generadores de JWT asociados a cada BFF.
+
+Desde la raíz del proyecto se pueden cargar tokens temporales como variables de entorno:
+
+```bash
+export JWT_WEB=$(cd bff-web && mvn -q exec:java \
+  -Dexec.mainClass="com.example.bffweb.security.JwtTokenGenerator" \
+  -Dexec.args="WEB")
+
+export JWT_MOBILE=$(cd bff-mobile && mvn -q exec:java \
+  -Dexec.mainClass="com.example.bffmobile.security.JwtTokenGenerator" \
+  -Dexec.args="MOBILE")
+
+export JWT_ATM=$(cd bff-atm && mvn -q exec:java \
+  -Dexec.mainClass="com.example.bffatm.security.JwtTokenGenerator" \
+  -Dexec.args="ATM")
+```
+
+Se puede verificar que las variables fueron cargadas sin mostrar los tokens completos:
+
+```bash
+echo "JWT WEB cargado: ${#JWT_WEB} caracteres"
+echo "JWT MOBILE cargado: ${#JWT_MOBILE} caracteres"
+echo "JWT ATM cargado: ${#JWT_ATM} caracteres"
+```
+
+Los tokens utilizados para pruebas tienen una duración limitada.
+
+![Tokens JWT por canal](evidencias_ejecucion/01_tokens_jwt_por_canal.png)
+
+---
+
+## 12. Ejemplos de pruebas por terminal
+
+### Web autorizado
+
+```bash
+curl -k -i \
+  -H "Authorization: Bearer $JWT_WEB" \
+  https://localhost:8441/api/web/cuentas/101
+```
+
+Resultado esperado:
+
+```text
+HTTP/1.1 200
+```
+
+### Web sin autenticación
+
+```bash
+curl -k -i \
+  https://localhost:8441/api/web/cuentas/101
+```
+
+Resultado esperado:
+
+```text
+HTTP/1.1 401
+```
+
+### Web con token de otro canal
+
+```bash
+curl -k -i \
+  -H "Authorization: Bearer $JWT_ATM" \
+  https://localhost:8441/api/web/cuentas/101
+```
+
+Resultado esperado:
+
+```text
+HTTP/1.1 403
+```
+
+### ATM — retiro válido
+
+```bash
+curl -k -i \
+  -X POST \
+  -H "Authorization: Bearer $JWT_ATM" \
+  -H "Content-Type: application/json" \
+  -d '{"monto":10}' \
+  https://localhost:8443/api/atm/cuentas/101/retiros
+```
+
+Resultado esperado:
+
+```text
+HTTP/1.1 200
+```
+
+---
+
+## 13. Evidencias de ejecución
+
+Las evidencias de Semana 5 se encuentran en:
+
+```text
+evidencias_ejecucion/
+```
+
+| Archivo | Validación |
+|---|---|
+| `01_tokens_jwt_por_canal.png` | Generación y carga de JWT para Web, Mobile y ATM |
+| `02_web_https_autenticacion_autorizacion.png` | HTTPS Web, `200`, `401` y `403` |
+| `03_mobile_https_autorizacion.png` | HTTPS Mobile, respuesta específica y autorización por canal |
+| `04_atm_https_saldo_retiro.png` | Consulta de saldo y retiro válido mediante HTTPS |
+| `05_atm_validacion_monto.png` | Validación de monto y respuesta `400` |
+| `06_optimizacion_respuestas.png` | Comparación de tamaño y tiempo entre los tres BFF |
+
+Las pruebas fueron realizadas manteniendo simultáneamente en ejecución `bank-core`, `bff-web`, `bff-mobile` y `bff-atm`.
+
+---
+
+## 14. Decisiones de diseño
+
+### BFF independientes
+
+Cada canal dispone de su propia aplicación Spring Boot.
+
+Esto permite modificar, desplegar o escalar un BFF sin requerir que los otros canales compartan necesariamente el mismo ciclo de despliegue.
+
+### Separación entre BFF y negocio
+
+Los BFF no acceden directamente a PostgreSQL.
+
+La persistencia y las reglas bancarias se encuentran centralizadas en `bank-core`, mientras que los BFF se concentran en:
+
+- exposición de endpoints por canal;
+- transformación de respuestas;
+- DTO específicos;
+- validación de entrada cuando corresponde;
+- autenticación y autorización;
+- comunicación con Bank Core.
+
+### Respuestas específicas por canal
+
+No se reutiliza una única representación para todos los clientes.
+
+Web recibe una respuesta completa, Mobile una representación reducida y ATM únicamente la información necesaria para sus operaciones.
+
+### Seguridad uniforme
+
+Los tres BFF utilizan el mismo mecanismo general de autenticación mediante JWT y comunicación HTTPS, pero aplican autorización específica según el rol de cada canal.
+
+---
+
+## 15. Tecnologías utilizadas
+
+- Java 17
+- Spring Boot 3.5.10
+- Spring Web
+- Spring Security
+- Spring Data JPA
+- Jakarta Validation
+- JWT / JJWT
+- PostgreSQL
+- Maven
+- HTTPS / TLS
+- Git y GitHub
+- curl y Postman para pruebas
+
+---
+
+## 16. Estado final
+
+La implementación contempla:
+
+- [x] BFF independiente para Web
+- [x] BFF independiente para Mobile
+- [x] BFF independiente para ATM
+- [x] respuestas adaptadas por canal
+- [x] reducción de payload según necesidades del cliente
+- [x] Bank Core separado de los BFF
+- [x] persistencia mediante Spring Data JPA
+- [x] validación de operaciones ATM
+- [x] autenticación mediante JWT
+- [x] autorización específica por canal
+- [x] HTTPS en los tres BFF
+- [x] certificado local para pruebas
+- [x] evidencias de ejecución
+- [x] medición comparativa de respuestas
