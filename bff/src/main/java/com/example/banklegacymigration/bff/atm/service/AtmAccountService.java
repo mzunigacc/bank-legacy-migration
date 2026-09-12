@@ -5,13 +5,16 @@ import com.example.banklegacymigration.bff.atm.dto.WithdrawalResponse;
 import com.example.banklegacymigration.bff.atm.exception.AccountNotFoundException;
 import com.example.banklegacymigration.bff.atm.exception.InsufficientFundsException;
 import com.example.banklegacymigration.bff.atm.exception.InvalidWithdrawalAmountException;
-import com.example.banklegacymigration.bff.common.model.Account;
+import com.example.banklegacymigration.bff.common.entity.Account;
+import com.example.banklegacymigration.bff.common.entity.AtmWithdrawal;
 import com.example.banklegacymigration.bff.common.repository.AccountRepository;
+import com.example.banklegacymigration.bff.common.repository.AtmWithdrawalRepository;
 import com.example.banklegacymigration.bff.common.service.AccountService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Service
@@ -19,12 +22,15 @@ public class AtmAccountService {
 
     private final AccountService accountService;
     private final AccountRepository accountRepository;
+    private final AtmWithdrawalRepository atmWithdrawalRepository;
 
     public AtmAccountService(
             AccountService accountService,
-            AccountRepository accountRepository) {
+            AccountRepository accountRepository,
+            AtmWithdrawalRepository atmWithdrawalRepository) {
         this.accountService = accountService;
         this.accountRepository = accountRepository;
+        this.atmWithdrawalRepository = atmWithdrawalRepository;
     }
 
     public Optional<AtmBalanceResponse> getBalance(Long cuentaId) {
@@ -61,15 +67,16 @@ public class AtmAccountService {
 
         BigDecimal nuevoSaldo = saldoActual.subtract(monto);
 
-        accountRepository.updateBalance(
-                cuentaId,
-                nuevoSaldo
-        );
+        account.setSaldoFinal(nuevoSaldo);
+        accountRepository.save(account);
 
-        accountRepository.saveWithdrawal(
+        AtmWithdrawal withdrawal = new AtmWithdrawal(
                 cuentaId,
+                LocalDateTime.now(),
                 monto
         );
+
+        atmWithdrawalRepository.save(withdrawal);
 
         return new WithdrawalResponse(
                 cuentaId,

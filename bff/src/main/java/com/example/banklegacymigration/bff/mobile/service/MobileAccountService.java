@@ -1,7 +1,7 @@
 package com.example.banklegacymigration.bff.mobile.service;
 
-import com.example.banklegacymigration.bff.common.model.Account;
-import com.example.banklegacymigration.bff.common.model.AccountMovement;
+import com.example.banklegacymigration.bff.common.entity.Account;
+import com.example.banklegacymigration.bff.common.entity.AccountMovement;
 import com.example.banklegacymigration.bff.common.service.AccountService;
 import com.example.banklegacymigration.bff.mobile.dto.MobileAccountDetailResponse;
 import com.example.banklegacymigration.bff.mobile.dto.MobileMovementResponse;

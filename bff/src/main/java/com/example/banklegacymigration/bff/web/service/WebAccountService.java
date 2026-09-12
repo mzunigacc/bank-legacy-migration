@@ -1,7 +1,7 @@
 package com.example.banklegacymigration.bff.web.service;
 
-import com.example.banklegacymigration.bff.common.model.Account;
-import com.example.banklegacymigration.bff.common.model.AccountMovement;
+import com.example.banklegacymigration.bff.common.entity.Account;
+import com.example.banklegacymigration.bff.common.entity.AccountMovement;
 import com.example.banklegacymigration.bff.common.service.AccountService;
 import com.example.banklegacymigration.bff.web.dto.WebAccountDetailResponse;
 import com.example.banklegacymigration.bff.web.dto.WebMovementResponse;

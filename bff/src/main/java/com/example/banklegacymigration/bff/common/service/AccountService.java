@@ -1,7 +1,7 @@
 package com.example.banklegacymigration.bff.common.service;
 
-import com.example.banklegacymigration.bff.common.model.Account;
-import com.example.banklegacymigration.bff.common.model.AccountMovement;
+import com.example.banklegacymigration.bff.common.entity.Account;
+import com.example.banklegacymigration.bff.common.entity.AccountMovement;
 import com.example.banklegacymigration.bff.common.repository.AccountMovementRepository;
 import com.example.banklegacymigration.bff.common.repository.AccountRepository;
 import org.springframework.stereotype.Service;
@@ -31,6 +31,7 @@ public class AccountService {
     }
 
     public List<AccountMovement> getMovements(Long cuentaId) {
-        return accountMovementRepository.findByAccountId(cuentaId);
+        return accountMovementRepository
+                .findByCuentaIdOrderByFechaDesc(cuentaId);
     }
 }
