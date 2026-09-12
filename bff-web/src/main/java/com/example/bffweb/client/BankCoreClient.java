@@ -1,0 +1,65 @@
+package com.example.bffweb.client;
+
+import com.example.bffweb.client.dto.CoreAccountResponse;
+import com.example.bffweb.client.dto.CoreMovementResponse;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
+
+import java.util.List;
+import java.util.Optional;
+
+@Component
+public class BankCoreClient {
+
+    private final RestClient restClient;
+
+    public BankCoreClient(
+            RestClient.Builder restClientBuilder,
+            @Value("${bank.core.base-url}") String bankCoreBaseUrl) {
+
+        this.restClient = restClientBuilder
+                .baseUrl(bankCoreBaseUrl)
+                .build();
+    }
+
+    public Optional<CoreAccountResponse> getAccount(Long cuentaId) {
+
+        try {
+            CoreAccountResponse response = restClient
+                    .get()
+                    .uri("/internal/accounts/{cuentaId}", cuentaId)
+                    .retrieve()
+                    .body(CoreAccountResponse.class);
+
+            return Optional.ofNullable(response);
+
+        } catch (RestClientResponseException exception) {
+
+            if (exception.getStatusCode().isSameCodeAs(
+                    HttpStatusCode.valueOf(404))) {
+                return Optional.empty();
+            }
+
+            throw exception;
+        }
+    }
+
+    public List<CoreMovementResponse> getMovements(Long cuentaId) {
+
+        List<CoreMovementResponse> response = restClient
+                .get()
+                .uri("/internal/accounts/{cuentaId}/movements", cuentaId)
+                .retrieve()
+                .body(new ParameterizedTypeReference<>() {
+                });
+
+        return response != null
+                ? response
+                : List.of();
+    }
+}
