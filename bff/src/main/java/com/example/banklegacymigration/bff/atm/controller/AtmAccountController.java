@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/atm/cuentas")
@@ -35,7 +36,7 @@ public class AtmAccountController {
     @PostMapping("/{cuentaId}/retiros")
     public ResponseEntity<WithdrawalResponse> withdraw(
             @PathVariable Long cuentaId,
-            @RequestBody WithdrawalRequest request) {
+            @Valid @RequestBody WithdrawalRequest request) {
 
         WithdrawalResponse response =
                 atmAccountService.withdraw(
