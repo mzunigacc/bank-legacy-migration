@@ -2,13 +2,13 @@
 
 Proyecto desarrollado para la asignatura **Desarrollo Backend III**, a partir del sistema de migración de datos legacy de Banco XYZ.
 
-La solución implementa una arquitectura **Backend for Frontend (BFF)** con backends independientes para los canales **Web, Mobile y ATM**, permitiendo adaptar las respuestas, seguridad y operaciones a las necesidades particulares de cada cliente.
+La solución implementa una arquitectura **Backend for Frontend (BFF)** con backends independientes para los canales **Web, Mobile y ATM**, complementada con componentes de **Spring Cloud** para configuración centralizada, descubrimiento de servicios y tolerancia a fallos.
 
 ---
 
 ## 1. Objetivo
 
-Implementar una estrategia Backend for Frontend para Banco XYZ que permita:
+Implementar una arquitectura de backend distribuida para Banco XYZ que permita:
 
 - disponer de un BFF independiente para Web;
 - disponer de un BFF independiente para Mobile;
@@ -18,6 +18,9 @@ Implementar una estrategia Backend for Frontend para Banco XYZ que permita:
 - implementar autenticación y autorización mediante JWT;
 - restringir cada BFF al rol correspondiente a su canal;
 - proteger los BFF mediante HTTPS;
+- centralizar configuraciones mediante Spring Cloud Config Server;
+- registrar y descubrir microservicios mediante Eureka Service Discovery;
+- incorporar tolerancia a fallos mediante Resilience4j Circuit Breaker y fallback;
 - mantener la lógica de negocio y persistencia separada de la adaptación realizada por los BFF.
 
 La arquitectura continúa el trabajo realizado durante las semanas anteriores, manteniendo además el procesamiento Batch como un componente independiente.
@@ -26,35 +29,53 @@ La arquitectura continúa el trabajo realizado durante las semanas anteriores, m
 
 ## 2. Arquitectura
 
-La solución final está compuesta por cinco aplicaciones principales:
+La solución está compuesta por los siguientes componentes principales:
 
 ```text
-                    ┌─────────────────────┐
-Web ── HTTPS/JWT ──▶│       BFF Web       │ :8441
-                    └──────────┬──────────┘
-                               │
-                    ┌──────────▼──────────┐
-Mobile ─HTTPS/JWT──▶│     BFF Mobile      │ :8442
-                    └──────────┬──────────┘
-                               │
-                    ┌──────────▼──────────┐
-ATM ─── HTTPS/JWT ─▶│       BFF ATM       │ :8443
-                    └──────────┬──────────┘
-                               │
-                               │ HTTP interno
-                               ▼
-                    ┌─────────────────────┐
-                    │      Bank Core      │ :8080
-                    │ negocio + JPA       │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                         PostgreSQL
+                         ┌──────────────────────┐
+                         │    Config Server     │
+                         │        :8888         │
+                         └──────────┬───────────┘
+                                    │
+                            configuración
+                                    │
+              ┌─────────────────────┼─────────────────────┐
+              │                     │                     │
+              ▼                     ▼                     ▼
+       ┌─────────────┐       ┌─────────────┐       ┌─────────────┐
+       │   BFF Web   │       │ BFF Mobile  │       │   BFF ATM   │
+       │    :8441    │       │    :8442    │       │    :8443    │
+       └──────┬──────┘       └──────┬──────┘       └──────┬──────┘
+              │                     │                     │
+              └─────────────────────┼─────────────────────┘
+                                    │
+                         Resilience4j / HTTP
+                                    │
+                                    ▼
+                         ┌─────────────────────┐
+                         │      Bank Core      │
+                         │        :8080        │
+                         │ negocio + JPA       │
+                         └──────────┬──────────┘
+                                    │
+                                    ▼
+                              PostgreSQL
+
+
+              BFF Web ────────┐
+              BFF Mobile ─────┼──▶ Eureka Discovery Server :8761
+              BFF ATM ────────┘
 ```
 
 Los tres BFF son aplicaciones Spring Boot independientes y no acceden directamente a PostgreSQL.
 
 `bank-core` centraliza la lógica bancaria y el acceso a datos, mientras que cada BFF se concentra en adaptar la API a las necesidades de su canal.
+
+`config-server` centraliza propiedades utilizadas por los BFF.
+
+`discovery-server` implementa Eureka y permite registrar los tres BFF como instancias disponibles.
+
+Los BFF incorporan Resilience4j para manejar de manera controlada fallos de comunicación con Bank Core.
 
 El módulo `batch` permanece separado de la capa BFF y conserva la responsabilidad sobre los procesos Batch desarrollados durante las semanas anteriores.
 
@@ -80,6 +101,17 @@ bank-legacy-migration/
 ├── bff-atm/
 │   └── Backend for Frontend para canal ATM
 │
+├── config-server/
+│   └── servidor de configuración centralizada
+│
+├── config-repo/
+│   ├── bff-web.properties
+│   ├── bff-mobile.properties
+│   └── bff-atm.properties
+│
+├── discovery-server/
+│   └── servidor Eureka Service Discovery
+│
 ├── database/
 │   └── scripts asociados a PostgreSQL
 │
@@ -88,7 +120,13 @@ bank-legacy-migration/
 ├── exploration/
 │
 ├── evidencias_ejecucion/
-│   └── evidencias de pruebas y ejecución
+│   ├── evidencias de semanas anteriores
+│   └── semana6/
+│       ├── 01_eureka_tres_bff_up.png
+│       ├── 02_config_server_bff_web.png
+│       ├── 03_bff_jwt_https_ejecucion.png
+│       ├── 04_autenticacion_autorizacion_jwt.png
+│       └── 05_resilience4j_fallback_tres_bff.png
 │
 └── README.md
 ```
@@ -148,41 +186,164 @@ Permite:
 
 La lógica bancaria del retiro permanece en `bank-core`; el BFF ATM se encarga de exponer y adaptar la operación para este canal.
 
+### Config Server
+
+`config-server` implementa Spring Cloud Config Server y centraliza propiedades que anteriormente se encontraban exclusivamente en la configuración local de cada BFF.
+
+Las configuraciones se encuentran en:
+
+```text
+config-repo/
+├── bff-web.properties
+├── bff-mobile.properties
+└── bff-atm.properties
+```
+
+Entre las propiedades centralizadas se encuentran:
+
+```properties
+bank.core.base-url=http://localhost:8080
+eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
+```
+
+El Config Server se encuentra disponible localmente en:
+
+```text
+http://localhost:8888
+```
+
+### Discovery Server
+
+`discovery-server` implementa Eureka Service Discovery.
+
+Se encuentra disponible en:
+
+```text
+http://localhost:8761
+```
+
+Los siguientes microservicios se registran en Eureka:
+
+```text
+BFF-WEB
+BFF-MOBILE
+BFF-ATM
+```
+
+Durante las pruebas se verificó que las tres instancias permanecieran registradas con estado `UP`.
+
 ---
 
-## 5. Optimización por canal
+## 5. Configuración centralizada
 
-La estrategia BFF permite entregar representaciones diferentes de una misma cuenta según las necesidades del cliente.
+Los BFF utilizan Spring Cloud Config Client para obtener configuración desde `config-server`.
 
-Durante las pruebas locales se obtuvieron los siguientes tamaños de respuesta:
+Cada aplicación mantiene su identidad mediante:
 
-| Canal | HTTP | Tamaño de respuesta |
-|---|---:|---:|
-| Web | 200 | 294 bytes |
-| Mobile | 200 | 133 bytes |
-| ATM | 200 | 42 bytes |
+```properties
+spring.application.name=bff-web
+```
 
-En la ejecución registrada:
+o su equivalente para Mobile y ATM.
 
-- Mobile redujo aproximadamente un **55 %** el tamaño respecto de Web.
-- ATM redujo aproximadamente un **86 %** el tamaño respecto de Web.
-- ATM redujo aproximadamente un **68 %** el tamaño respecto de Mobile.
+La conexión con Config Server se realiza mediante:
 
-Los tiempos observados durante una ejecución local fueron:
+```properties
+spring.config.import=configserver:http://localhost:8888
+```
 
-| Canal | Tiempo observado |
-|---|---:|
-| Web | 0.078947 s |
-| Mobile | 0.050789 s |
-| ATM | 0.029518 s |
+Por ejemplo, la configuración centralizada de Web puede consultarse mediante:
 
-Estos tiempos corresponden a una ejecución local y pueden variar entre ejecuciones. La diferencia de tamaño, en cambio, responde directamente al diseño de los DTO específicos de cada BFF.
+```bash
+curl http://localhost:8888/bff-web/default
+```
 
-![Comparación de respuestas](evidencias_ejecucion/06_optimizacion_respuestas.png)
+La respuesta permite verificar que `bff-web` obtiene propiedades desde:
+
+```text
+config-repo/bff-web.properties
+```
+
+Evidencia:
+
+![Config Server BFF Web](evidencias_ejecucion/semana6/02_config_server_bff_web.png)
 
 ---
 
-## 6. Seguridad
+## 6. Service Discovery
+
+Los BFF utilizan Eureka Client y se registran en el Discovery Server.
+
+La dirección de Eureka se encuentra centralizada mediante Config Server:
+
+```properties
+eureka.client.service-url.defaultZone=http://localhost:8761/eureka/
+```
+
+Durante la ejecución se verificó el registro simultáneo de:
+
+```text
+BFF-WEB       UP
+BFF-MOBILE    UP
+BFF-ATM       UP
+```
+
+Evidencia:
+
+![Eureka - tres BFF registrados](evidencias_ejecucion/semana6/01_eureka_tres_bff_up.png)
+
+---
+
+## 7. Tolerancia a fallos con Resilience4j
+
+Los BFF incorporan **Resilience4j Circuit Breaker** para manejar fallos de comunicación con Bank Core.
+
+La integración utiliza:
+
+- `spring-cloud-starter-circuitbreaker-resilience4j`;
+- `spring-boot-starter-aop`;
+- anotaciones `@CircuitBreaker`;
+- métodos de fallback.
+
+Ejemplo conceptual:
+
+```java
+@CircuitBreaker(
+    name = "bankCore",
+    fallbackMethod = "getAccountFallback"
+)
+public Optional<CoreAccountResponse> getAccount(Long cuentaId) {
+    // llamada a Bank Core
+}
+```
+
+El fallback recibe los mismos parámetros del método protegido y un `Throwable` adicional.
+
+Ante una falla de infraestructura, como Bank Core no disponible, el BFF evita propagar directamente la excepción de conexión y ejecuta el fallback correspondiente.
+
+Durante las pruebas se detuvo `bank-core` manteniendo los tres BFF en ejecución.
+
+El resultado observado fue:
+
+```text
+BFF Web       → HTTP 404 controlado
+BFF Mobile    → HTTP 404 controlado
+BFF ATM       → HTTP 404 controlado
+```
+
+En las consolas de los BFF se verificó además la ejecución del fallback ante `ResourceAccessException`.
+
+La implementación conserva el tratamiento existente de errores funcionales. Por ejemplo, un `404` real proveniente de Bank Core continúa representando una cuenta inexistente.
+
+En ATM, la operación transaccional de retiro conserva su manejo específico de errores y no simula una operación exitosa cuando Bank Core no está disponible.
+
+Evidencia:
+
+![Resilience4j - fallback](evidencias_ejecucion/semana6/05_resilience4j_fallback_tres_bff.png)
+
+---
+
+## 8. Seguridad
 
 ### HTTPS
 
@@ -198,7 +359,7 @@ Para el entorno académico/local se utiliza un certificado autofirmado en format
 
 El certificado permite probar comunicación mediante TLS en los tres BFF. Al tratarse de un certificado autofirmado, herramientas como Postman o `curl` deben aceptar explícitamente el certificado local.
 
-En `curl`, las pruebas locales utilizan la opción:
+En `curl`, las pruebas locales utilizan:
 
 ```bash
 -k
@@ -220,7 +381,7 @@ ROLE_ATM
 
 Cada BFF autoriza exclusivamente el rol correspondiente.
 
-La matriz esperada es:
+La matriz validada es:
 
 | Solicitud | Resultado |
 |---|---:|
@@ -228,30 +389,21 @@ La matriz esperada es:
 | Sin token o token inválido | `401 Unauthorized` |
 | Token válido de otro canal | `403 Forbidden` |
 
-Por ejemplo:
+Durante la validación de Semana 6 se ejecutaron tres pruebas sobre BFF Web:
 
 ```text
-JWT WEB    → BFF Web    → 200
-sin JWT    → BFF Web    → 401
-JWT ATM    → BFF Web    → 403
-
-JWT MOBILE → BFF Mobile → 200
-JWT WEB    → BFF Mobile → 403
-
-JWT ATM    → BFF ATM    → 200
+JWT WEB correcto       → HTTP 200
+Sin JWT                → HTTP 401
+JWT MOBILE en BFF WEB  → HTTP 403
 ```
 
-La siguiente evidencia muestra autenticación y autorización en el canal Web:
+Evidencia:
 
-![Seguridad BFF Web](evidencias_ejecucion/02_web_https_autenticacion_autorizacion.png)
-
-En Mobile se verifica además que un JWT válido perteneciente a otro canal obtiene `403 Forbidden`:
-
-![Seguridad BFF Mobile](evidencias_ejecucion/03_mobile_https_autorizacion.png)
+![Autenticación y autorización JWT](evidencias_ejecucion/semana6/04_autenticacion_autorizacion_jwt.png)
 
 ---
 
-## 7. Endpoints
+## 9. Endpoints
 
 ### Web
 
@@ -331,17 +483,13 @@ Requiere:
 ROLE_ATM
 ```
 
-La ejecución de una consulta de saldo y un retiro válido se encuentra documentada en:
-
-![Operaciones ATM](evidencias_ejecucion/04_atm_https_saldo_retiro.png)
-
 ---
 
-## 8. Validación de operaciones ATM
+## 10. Validación de operaciones ATM
 
 Las solicitudes de retiro utilizan Jakarta Validation antes de enviar la operación a Bank Core.
 
-Ejemplos de validación:
+Ejemplo:
 
 ```json
 {
@@ -369,13 +517,39 @@ También se manejan respuestas asociadas a situaciones como:
 - saldo insuficiente;
 - monto inválido.
 
-Evidencia de validación:
+---
 
-![Validación ATM](evidencias_ejecucion/05_atm_validacion_monto.png)
+## 11. Optimización por canal
+
+La estrategia BFF permite entregar representaciones diferentes de una misma cuenta según las necesidades del cliente.
+
+Durante las pruebas locales se obtuvieron los siguientes tamaños de respuesta:
+
+| Canal | HTTP | Tamaño de respuesta |
+|---|---:|---:|
+| Web | 200 | 294 bytes |
+| Mobile | 200 | 133 bytes |
+| ATM | 200 | 42 bytes |
+
+En la ejecución registrada:
+
+- Mobile redujo aproximadamente un **55 %** el tamaño respecto de Web.
+- ATM redujo aproximadamente un **86 %** el tamaño respecto de Web.
+- ATM redujo aproximadamente un **68 %** el tamaño respecto de Mobile.
+
+Los tiempos observados durante una ejecución local fueron:
+
+| Canal | Tiempo observado |
+|---|---:|
+| Web | 0.078947 s |
+| Mobile | 0.050789 s |
+| ATM | 0.029518 s |
+
+Estos tiempos corresponden a una ejecución local y pueden variar entre ejecuciones. La diferencia de tamaño responde directamente al diseño de los DTO específicos de cada BFF.
 
 ---
 
-## 9. Requisitos para ejecución
+## 12. Requisitos para ejecución
 
 Para ejecutar el proyecto localmente se requiere:
 
@@ -383,15 +557,59 @@ Para ejecutar el proyecto localmente se requiere:
 - Maven;
 - PostgreSQL;
 - base de datos `bank_legacy` configurada;
-- puertos `8080`, `8441`, `8442` y `8443` disponibles.
+- puertos disponibles:
+  - `8080` para Bank Core;
+  - `8888` para Config Server;
+  - `8761` para Eureka Discovery Server;
+  - `8441` para BFF Web;
+  - `8442` para BFF Mobile;
+  - `8443` para BFF ATM.
 
 ---
 
-## 10. Ejecución
+## 13. Orden de ejecución
+
+Debido a las dependencias entre componentes, se recomienda iniciar las aplicaciones en el siguiente orden:
+
+```text
+1. PostgreSQL
+2. Config Server
+3. Discovery Server
+4. Bank Core
+5. BFF Web
+6. BFF Mobile
+7. BFF ATM
+```
 
 Las aplicaciones deben ejecutarse en terminales independientes.
 
-### 10.1 Bank Core
+### 13.1 Config Server
+
+```bash
+cd config-server
+mvn spring-boot:run
+```
+
+Disponible en:
+
+```text
+http://localhost:8888
+```
+
+### 13.2 Discovery Server
+
+```bash
+cd discovery-server
+mvn spring-boot:run
+```
+
+Dashboard de Eureka:
+
+```text
+http://localhost:8761
+```
+
+### 13.3 Bank Core
 
 ```bash
 cd bank-core
@@ -404,7 +622,7 @@ Disponible en:
 http://localhost:8080
 ```
 
-### 10.2 BFF Web
+### 13.4 BFF Web
 
 ```bash
 cd bff-web
@@ -417,7 +635,7 @@ Disponible en:
 https://localhost:8441
 ```
 
-### 10.3 BFF Mobile
+### 13.5 BFF Mobile
 
 ```bash
 cd bff-mobile
@@ -430,7 +648,7 @@ Disponible en:
 https://localhost:8442
 ```
 
-### 10.4 BFF ATM
+### 13.6 BFF ATM
 
 ```bash
 cd bff-atm
@@ -445,46 +663,44 @@ https://localhost:8443
 
 ---
 
-## 11. Generación de tokens para pruebas
+## 14. Generación de tokens para pruebas
 
 Para las pruebas locales se incluyen generadores de JWT asociados a cada BFF.
 
-Desde la raíz del proyecto se pueden cargar tokens temporales como variables de entorno:
+Desde la raíz del proyecto:
 
 ```bash
-export JWT_WEB=$(cd bff-web && mvn -q exec:java \
+JWT_WEB=$(mvn -q -f bff-web/pom.xml exec:java \
   -Dexec.mainClass="com.example.bffweb.security.JwtTokenGenerator" \
-  -Dexec.args="WEB")
+  -Dexec.args="WEB" 2>/dev/null)
 
-export JWT_MOBILE=$(cd bff-mobile && mvn -q exec:java \
+JWT_MOBILE=$(mvn -q -f bff-mobile/pom.xml exec:java \
   -Dexec.mainClass="com.example.bffmobile.security.JwtTokenGenerator" \
-  -Dexec.args="MOBILE")
+  -Dexec.args="MOBILE" 2>/dev/null)
 
-export JWT_ATM=$(cd bff-atm && mvn -q exec:java \
+JWT_ATM=$(mvn -q -f bff-atm/pom.xml exec:java \
   -Dexec.mainClass="com.example.bffatm.security.JwtTokenGenerator" \
-  -Dexec.args="ATM")
-```
-
-Se puede verificar que las variables fueron cargadas sin mostrar los tokens completos:
-
-```bash
-echo "JWT WEB cargado: ${#JWT_WEB} caracteres"
-echo "JWT MOBILE cargado: ${#JWT_MOBILE} caracteres"
-echo "JWT ATM cargado: ${#JWT_ATM} caracteres"
+  -Dexec.args="ATM" 2>/dev/null)
 ```
 
 Los tokens utilizados para pruebas tienen una duración limitada.
 
-![Tokens JWT por canal](evidencias_ejecucion/01_tokens_jwt_por_canal.png)
-
 ---
 
-## 12. Ejemplos de pruebas por terminal
+## 15. Pruebas por terminal
+
+### Config Server
+
+```bash
+curl -s http://localhost:8888/bff-web/default | python3 -m json.tool
+```
+
+Permite comprobar que Config Server entrega la configuración centralizada de `bff-web`.
 
 ### Web autorizado
 
 ```bash
-curl -k -i \
+curl -ki \
   -H "Authorization: Bearer $JWT_WEB" \
   https://localhost:8441/api/web/cuentas/101
 ```
@@ -495,10 +711,42 @@ Resultado esperado:
 HTTP/1.1 200
 ```
 
+### Mobile autorizado
+
+```bash
+curl -ki \
+  -H "Authorization: Bearer $JWT_MOBILE" \
+  https://localhost:8442/api/mobile/cuentas/101
+```
+
+Resultado esperado:
+
+```text
+HTTP/1.1 200
+```
+
+### ATM autorizado
+
+```bash
+curl -ki \
+  -H "Authorization: Bearer $JWT_ATM" \
+  https://localhost:8443/api/atm/cuentas/101/saldo
+```
+
+Resultado esperado:
+
+```text
+HTTP/1.1 200
+```
+
+La ejecución conjunta de los tres canales se encuentra documentada en:
+
+![Ejecución BFF con JWT y HTTPS](evidencias_ejecucion/semana6/03_bff_jwt_https_ejecucion.png)
+
 ### Web sin autenticación
 
 ```bash
-curl -k -i \
+curl -ki \
   https://localhost:8441/api/web/cuentas/101
 ```
 
@@ -511,8 +759,8 @@ HTTP/1.1 401
 ### Web con token de otro canal
 
 ```bash
-curl -k -i \
-  -H "Authorization: Bearer $JWT_ATM" \
+curl -ki \
+  -H "Authorization: Bearer $JWT_MOBILE" \
   https://localhost:8441/api/web/cuentas/101
 ```
 
@@ -522,47 +770,41 @@ Resultado esperado:
 HTTP/1.1 403
 ```
 
-### ATM — retiro válido
+### Prueba de tolerancia a fallos
+
+Con los BFF activos y `bank-core` detenido temporalmente:
 
 ```bash
-curl -k -i \
-  -X POST \
-  -H "Authorization: Bearer $JWT_ATM" \
-  -H "Content-Type: application/json" \
-  -d '{"monto":10}' \
-  https://localhost:8443/api/atm/cuentas/101/retiros
+curl -ks -o /dev/null -w "HTTP %{http_code}\n" \
+  -H "Authorization: Bearer $JWT_WEB" \
+  https://localhost:8441/api/web/cuentas/101
 ```
 
-Resultado esperado:
-
-```text
-HTTP/1.1 200
-```
+El fallback permite entregar una respuesta controlada en lugar de propagar directamente el error de conexión.
 
 ---
 
-## 13. Evidencias de ejecución
+## 16. Evidencias de ejecución — Semana 6
 
-Las evidencias de Semana 5 se encuentran en:
+Las evidencias asociadas a la implementación de Spring Cloud, seguridad y tolerancia a fallos se encuentran en:
 
 ```text
-evidencias_ejecucion/
+evidencias_ejecucion/semana6/
 ```
 
 | Archivo | Validación |
 |---|---|
-| `01_tokens_jwt_por_canal.png` | Generación y carga de JWT para Web, Mobile y ATM |
-| `02_web_https_autenticacion_autorizacion.png` | HTTPS Web, `200`, `401` y `403` |
-| `03_mobile_https_autorizacion.png` | HTTPS Mobile, respuesta específica y autorización por canal |
-| `04_atm_https_saldo_retiro.png` | Consulta de saldo y retiro válido mediante HTTPS |
-| `05_atm_validacion_monto.png` | Validación de monto y respuesta `400` |
-| `06_optimizacion_respuestas.png` | Comparación de tamaño y tiempo entre los tres BFF |
+| `01_eureka_tres_bff_up.png` | Registro simultáneo de BFF Web, Mobile y ATM en Eureka con estado `UP` |
+| `02_config_server_bff_web.png` | Config Server entregando configuración centralizada a BFF Web |
+| `03_bff_jwt_https_ejecucion.png` | Ejecución funcional de Web, Mobile y ATM mediante HTTPS y JWT |
+| `04_autenticacion_autorizacion_jwt.png` | Autenticación y autorización: `200`, `401` y `403` |
+| `05_resilience4j_fallback_tres_bff.png` | Respuesta controlada de los tres BFF con Bank Core no disponible |
 
-Las pruebas fueron realizadas manteniendo simultáneamente en ejecución `bank-core`, `bff-web`, `bff-mobile` y `bff-atm`.
+Estas evidencias complementan las pruebas y documentación desarrolladas durante las semanas anteriores.
 
 ---
 
-## 14. Decisiones de diseño
+## 17. Decisiones de diseño
 
 ### BFF independientes
 
@@ -581,13 +823,34 @@ La persistencia y las reglas bancarias se encuentran centralizadas en `bank-core
 - DTO específicos;
 - validación de entrada cuando corresponde;
 - autenticación y autorización;
-- comunicación con Bank Core.
+- comunicación con Bank Core;
+- tolerancia a fallos en llamadas externas.
 
-### Respuestas específicas por canal
+### Configuración centralizada
 
-No se reutiliza una única representación para todos los clientes.
+Las propiedades compartidas o dependientes del entorno se administran mediante Config Server y `config-repo`.
 
-Web recibe una respuesta completa, Mobile una representación reducida y ATM únicamente la información necesaria para sus operaciones.
+Esto evita depender exclusivamente de configuraciones locales independientes en cada BFF y permite centralizar cambios de infraestructura.
+
+### Service Discovery
+
+Los tres BFF se registran en Eureka.
+
+Esto permite disponer de un registro centralizado de las instancias activas y establece la base para una arquitectura de microservicios con descubrimiento dinámico.
+
+### Tolerancia a fallos
+
+Las consultas hacia Bank Core protegidas con Resilience4j utilizan Circuit Breaker y métodos fallback.
+
+El objetivo es evitar que una indisponibilidad de Bank Core provoque directamente una excepción no controlada en los BFF.
+
+Los fallbacks utilizados en las consultas devuelven respuestas degradadas y controladas.
+
+### Operaciones transaccionales
+
+La operación de retiro de ATM conserva su manejo específico de errores.
+
+No se utiliza un fallback que simule un retiro exitoso cuando Bank Core no está disponible, evitando representar como realizada una operación que no pudo confirmarse.
 
 ### Seguridad uniforme
 
@@ -595,13 +858,20 @@ Los tres BFF utilizan el mismo mecanismo general de autenticación mediante JWT 
 
 ---
 
-## 15. Tecnologías utilizadas
+## 18. Tecnologías utilizadas
 
 - Java 17
 - Spring Boot 3.5.10
 - Spring Web
 - Spring Security
 - Spring Data JPA
+- Spring Cloud 2025.0.0
+- Spring Cloud Config Server
+- Spring Cloud Config Client
+- Netflix Eureka Server
+- Netflix Eureka Client
+- Resilience4j
+- Spring AOP
 - Jakarta Validation
 - JWT / JJWT
 - PostgreSQL
@@ -612,7 +882,7 @@ Los tres BFF utilizan el mismo mecanismo general de autenticación mediante JWT 
 
 ---
 
-## 16. Estado final
+## 19. Estado final
 
 La implementación contempla:
 
@@ -628,5 +898,13 @@ La implementación contempla:
 - [x] autorización específica por canal
 - [x] HTTPS en los tres BFF
 - [x] certificado local para pruebas
-- [x] evidencias de ejecución
-- [x] medición comparativa de respuestas
+- [x] Config Server funcional
+- [x] configuración centralizada mediante `config-repo`
+- [x] Eureka Discovery Server funcional
+- [x] BFF Web registrado en Eureka
+- [x] BFF Mobile registrado en Eureka
+- [x] BFF ATM registrado en Eureka
+- [x] Circuit Breaker con Resilience4j
+- [x] fallback ante indisponibilidad de Bank Core
+- [x] tolerancia a fallos validada en los tres BFF
+- [x] evidencias de ejecución de Semana 6
