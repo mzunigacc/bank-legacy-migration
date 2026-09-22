@@ -5,6 +5,8 @@ import com.example.bffatm.client.dto.CoreWithdrawalRequest;
 import com.example.bffatm.client.dto.CoreWithdrawalResponse;
 import com.example.bffatm.exception.CoreApiException;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -27,6 +29,10 @@ public class BankCoreClient {
                 .build();
     }
 
+    @CircuitBreaker(
+            name = "bankCore",
+            fallbackMethod = "getAccountFallback"
+    )
     public Optional<CoreAccountResponse> getAccount(Long cuentaId) {
 
         try {
@@ -70,6 +76,18 @@ public class BankCoreClient {
                     extractMessage(exception)
             );
         }
+    }
+
+    private Optional<CoreAccountResponse> getAccountFallback(
+            Long cuentaId,
+            Throwable throwable) {
+
+        System.out.println(
+                "Fallback Bank Core - cuenta " + cuentaId
+                        + ": " + throwable.getClass().getSimpleName()
+        );
+
+        return Optional.empty();
     }
 
     private String extractMessage(

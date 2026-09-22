@@ -3,6 +3,8 @@ package com.example.bffmobile.client;
 import com.example.bffmobile.client.dto.CoreAccountResponse;
 import com.example.bffmobile.client.dto.CoreMovementResponse;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpStatusCode;
@@ -27,6 +29,10 @@ public class BankCoreClient {
                 .build();
     }
 
+    @CircuitBreaker(
+            name = "bankCore",
+            fallbackMethod = "getAccountFallback"
+    )
     public Optional<CoreAccountResponse> getAccount(Long cuentaId) {
 
         try {
@@ -49,6 +55,10 @@ public class BankCoreClient {
         }
     }
 
+    @CircuitBreaker(
+            name = "bankCore",
+            fallbackMethod = "getMovementsFallback"
+    )
     public List<CoreMovementResponse> getMovements(Long cuentaId) {
 
         List<CoreMovementResponse> response = restClient
@@ -61,5 +71,29 @@ public class BankCoreClient {
         return response != null
                 ? response
                 : List.of();
+    }
+
+    private Optional<CoreAccountResponse> getAccountFallback(
+            Long cuentaId,
+            Throwable throwable) {
+
+        System.out.println(
+                "Fallback Bank Core - cuenta " + cuentaId
+                        + ": " + throwable.getClass().getSimpleName()
+        );
+
+        return Optional.empty();
+    }
+
+    private List<CoreMovementResponse> getMovementsFallback(
+            Long cuentaId,
+            Throwable throwable) {
+
+        System.out.println(
+                "Fallback Bank Core - movimientos cuenta " + cuentaId
+                        + ": " + throwable.getClass().getSimpleName()
+        );
+
+        return List.of();
     }
 }
