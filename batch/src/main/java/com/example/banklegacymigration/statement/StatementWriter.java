@@ -33,18 +33,21 @@ public class StatementWriter
                         anomalia,
                         motivo
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT (cuenta_id, fecha, transaccion, monto)
-                    DO NOTHING
+                    VALUES (?, ?, ?, ?, ?, ?, false, null)
+                    ON CONFLICT (cuenta_id, fecha, transaccion)
+                    DO UPDATE SET
+                        monto = EXCLUDED.monto,
+                        descripcion = EXCLUDED.descripcion,
+                        movimiento = EXCLUDED.movimiento,
+                        anomalia = false,
+                        motivo = null
                     """,
                     statement.getCuentaId(),
                     statement.getFecha(),
                     statement.getTransaccion(),
                     statement.getMonto(),
                     statement.getDescripcion(),
-                    statement.getMovimiento(),
-                    statement.isAnomalia(),
-                    statement.getMotivo()
+                    statement.getMovimiento()
             );
         }
     }

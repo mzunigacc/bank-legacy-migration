@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 public class InterestPartitioner implements Partitioner {
 
     private static final Path FILE_PATH =
-            Path.of("data/intereses.csv");
+            Path.of("../data/semana3/intereses_trimestrales.csv");
 
     @Override
     public Map<String, ExecutionContext> partition(int gridSize) {

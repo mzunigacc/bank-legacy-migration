@@ -6,6 +6,10 @@ import java.time.LocalDate;
 public class AnnualStatement {
 
     private Long cuentaId;
+
+    private String fechaRaw;
+    private String montoRaw;
+
     private LocalDate fecha;
     private String transaccion;
     private BigDecimal monto;
@@ -20,20 +24,16 @@ public class AnnualStatement {
 
     public AnnualStatement(
             Long cuentaId,
-            LocalDate fecha,
+            String fechaRaw,
             String transaccion,
-            BigDecimal monto,
+            String montoRaw,
             String descripcion) {
 
         this.cuentaId = cuentaId;
-        this.fecha = fecha;
+        this.fechaRaw = fechaRaw;
         this.transaccion = transaccion;
-        this.monto = monto;
+        this.montoRaw = montoRaw;
         this.descripcion = descripcion;
-
-        this.movimiento = null;
-        this.anomalia = false;
-        this.motivo = null;
     }
 
     public Long getCuentaId() {
@@ -42,6 +42,22 @@ public class AnnualStatement {
 
     public void setCuentaId(Long cuentaId) {
         this.cuentaId = cuentaId;
+    }
+
+    public String getFechaRaw() {
+        return fechaRaw;
+    }
+
+    public void setFechaRaw(String fechaRaw) {
+        this.fechaRaw = fechaRaw;
+    }
+
+    public String getMontoRaw() {
+        return montoRaw;
+    }
+
+    public void setMontoRaw(String montoRaw) {
+        this.montoRaw = montoRaw;
     }
 
     public LocalDate getFecha() {

@@ -6,23 +6,20 @@ import java.time.LocalDate;
 public class Transaction {
 
     private Long id;
+    private String fechaRaw;
+    private String montoRaw;
     private LocalDate fecha;
     private BigDecimal monto;
     private String tipo;
 
-    private boolean anomalia;
-    private String motivo;
-
     public Transaction() {
     }
 
-    public Transaction(Long id, LocalDate fecha, BigDecimal monto, String tipo) {
+    public Transaction(Long id, String fechaRaw, String montoRaw, String tipo) {
         this.id = id;
-        this.fecha = fecha;
-        this.monto = monto;
+        this.fechaRaw = fechaRaw;
+        this.montoRaw = montoRaw;
         this.tipo = tipo;
-        this.anomalia = false;
-        this.motivo = null;
     }
 
     public Long getId() {
@@ -31,6 +28,22 @@ public class Transaction {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public String getFechaRaw() {
+        return fechaRaw;
+    }
+
+    public void setFechaRaw(String fechaRaw) {
+        this.fechaRaw = fechaRaw;
+    }
+
+    public String getMontoRaw() {
+        return montoRaw;
+    }
+
+    public void setMontoRaw(String montoRaw) {
+        this.montoRaw = montoRaw;
     }
 
     public LocalDate getFecha() {
@@ -57,22 +70,6 @@ public class Transaction {
         this.tipo = tipo;
     }
 
-    public boolean isAnomalia() {
-        return anomalia;
-    }
-
-    public void setAnomalia(boolean anomalia) {
-        this.anomalia = anomalia;
-    }
-
-    public String getMotivo() {
-        return motivo;
-    }
-
-    public void setMotivo(String motivo) {
-        this.motivo = motivo;
-    }
-
     @Override
     public String toString() {
         return "Transaction{" +
@@ -80,8 +77,6 @@ public class Transaction {
                 ", fecha=" + fecha +
                 ", monto=" + monto +
                 ", tipo='" + tipo + '\'' +
-                ", anomalia=" + anomalia +
-                ", motivo='" + motivo + '\'' +
                 '}';
     }
 }

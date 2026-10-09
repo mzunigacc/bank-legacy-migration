@@ -1,8 +1,5 @@
 package com.example.banklegacymigration.statement;
 
-import java.math.BigDecimal;
-import java.time.LocalDate;
-
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
@@ -24,7 +21,7 @@ public class StatementReader {
                 .name("statementItemReader")
                 .resource(
                         new FileSystemResource(
-                                "data/cuentas_anuales.csv"
+                                "../data/semana3/estados_financieros_anuales.csv"
                         )
                 )
                 .linesToSkip(1)
@@ -38,13 +35,9 @@ public class StatementReader {
                 )
                 .fieldSetMapper(fieldSet -> new AnnualStatement(
                         fieldSet.readLong("cuenta_id"),
-                        LocalDate.parse(
-                                fieldSet.readString("fecha")
-                        ),
+                        fieldSet.readString("fecha"),
                         fieldSet.readString("transaccion"),
-                        new BigDecimal(
-                                fieldSet.readString("monto")
-                        ),
+                        fieldSet.readString("monto"),
                         fieldSet.readString("descripcion")
                 ))
                 .currentItemCount(start)
