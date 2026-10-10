@@ -1,6 +1,6 @@
 package com.example.bffweb.service;
 
-import com.example.bffweb.client.BankCoreClient;
+import com.example.bffweb.client.AccountServiceClient;
 import com.example.bffweb.client.dto.CoreAccountResponse;
 import com.example.bffweb.client.dto.CoreMovementResponse;
 import com.example.bffweb.dto.WebAccountDetailResponse;
@@ -14,23 +14,23 @@ import java.util.Optional;
 @Service
 public class WebAccountService {
 
-    private final BankCoreClient bankCoreClient;
+    private final AccountServiceClient accountServiceClient;
 
-    public WebAccountService(BankCoreClient bankCoreClient) {
-        this.bankCoreClient = bankCoreClient;
+    public WebAccountService(AccountServiceClient accountServiceClient) {
+        this.accountServiceClient = accountServiceClient;
     }
 
     public Optional<WebAccountDetailResponse> getAccount(Long cuentaId) {
 
         Optional<CoreAccountResponse> account =
-                bankCoreClient.getAccount(cuentaId);
+                accountServiceClient.getAccount(cuentaId);
 
         if (account.isEmpty()) {
             return Optional.empty();
         }
 
         List<CoreMovementResponse> movements =
-                bankCoreClient.getMovements(cuentaId);
+                accountServiceClient.getMovements(cuentaId);
 
         return Optional.of(
                 toDetailResponse(account.get(), movements)
