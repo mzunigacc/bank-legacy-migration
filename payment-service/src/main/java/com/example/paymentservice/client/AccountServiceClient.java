@@ -3,7 +3,10 @@ package com.example.paymentservice.client;
 import com.example.paymentservice.dto.DebitRequest;
 import com.example.paymentservice.dto.DebitResult;
 import com.example.paymentservice.exception.AccountNotFoundException;
+import com.example.paymentservice.exception.AccountServiceUnavailableException;
 import com.example.paymentservice.exception.InsufficientFundsException;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -23,7 +26,16 @@ public class AccountServiceClient {
                 .build();
     }
 
-    public DebitResult debit(Long cuentaId, BigDecimal monto, String bearerToken) {
+    @CircuitBreaker(
+            name = "accountService",
+            fallbackMethod = "debitFallback"
+    )
+    @Bulkhead(name = "accountService")
+    public DebitResult debit(
+            Long cuentaId,
+            BigDecimal monto,
+            String bearerToken
+    ) {
         return restClient.post()
                 .uri("/internal/accounts/{cuentaId}/debit", cuentaId)
                 .header(HttpHeaders.AUTHORIZATION, bearerToken)
@@ -42,5 +54,22 @@ public class AccountServiceClient {
                         }
                 )
                 .body(DebitResult.class);
+    }
+
+    private DebitResult debitFallback(
+            Long cuentaId,
+            BigDecimal monto,
+            String bearerToken,
+            Throwable throwable
+    ) {
+        if (throwable instanceof AccountNotFoundException accountNotFound) {
+            throw accountNotFound;
+        }
+
+        if (throwable instanceof InsufficientFundsException insufficientFunds) {
+            throw insufficientFunds;
+        }
+
+        throw new AccountServiceUnavailableException(throwable);
     }
 }
