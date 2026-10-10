@@ -1,9 +1,13 @@
 package com.example.accountservice.controller;
 
 import com.example.accountservice.dto.CreateAccountRequest;
+import com.example.accountservice.dto.CreditRequest;
+import com.example.accountservice.dto.CreditResult;
 import com.example.accountservice.dto.DebitRequest;
 import com.example.accountservice.dto.DebitResult;
 import com.example.accountservice.dto.UpdateAccountRequest;
+import com.example.accountservice.dto.TransferRequest;
+import com.example.accountservice.dto.TransferResult;
 import com.example.accountservice.entity.Account;
 import com.example.accountservice.entity.AccountMovement;
 import com.example.accountservice.service.AccountService;
@@ -79,6 +83,32 @@ public class AccountController {
         accountService.closeAccount(cuentaId);
 
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{cuentaId}/credit")
+    public ResponseEntity<CreditResult> credit(
+            @PathVariable Long cuentaId,
+            @Valid @RequestBody CreditRequest request) {
+
+        return ResponseEntity.ok(
+                accountService.credit(
+                        cuentaId,
+                        request.monto()
+                )
+        );
+    }
+
+    @PostMapping("/{cuentaId}/transfer")
+    public ResponseEntity<TransferResult> transfer(
+            @PathVariable Long cuentaId,
+            @Valid @RequestBody TransferRequest request) {
+
+        return ResponseEntity.ok(
+                accountService.transfer(
+                        cuentaId,
+                        request
+                )
+        );
     }
 
     @PostMapping("/{cuentaId}/debit")

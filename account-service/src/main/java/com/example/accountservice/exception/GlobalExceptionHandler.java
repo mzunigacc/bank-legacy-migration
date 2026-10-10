@@ -35,6 +35,18 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(SameAccountTransferException.class)
+    public ResponseEntity<Map<String, String>> handleSameAccountTransfer(
+            SameAccountTransferException exception) {
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                        "error", "SAME_ACCOUNT_TRANSFER",
+                        "message", exception.getMessage()
+                ));
+    }
+
     @ExceptionHandler(InsufficientFundsException.class)
     public ResponseEntity<Map<String, String>> handleInsufficientFunds(
             InsufficientFundsException exception) {

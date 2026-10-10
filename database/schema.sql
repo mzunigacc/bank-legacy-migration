@@ -94,3 +94,16 @@ CREATE TABLE IF NOT EXISTS retiros_atm (
     fecha_hora TIMESTAMP NOT NULL,
     monto NUMERIC(15,2) NOT NULL
 );
+
+-- =========================================================
+-- 7. OPERACIONES DE PAGO - EFT
+-- =========================================================
+
+CREATE TABLE IF NOT EXISTS payment_operations (
+    id BIGSERIAL PRIMARY KEY,
+    operation_type VARCHAR(50) NOT NULL,
+    source_account_id BIGINT,
+    target_account_id BIGINT NOT NULL,
+    amount NUMERIC(15,2) NOT NULL,
+    created_at TIMESTAMP NOT NULL
+);

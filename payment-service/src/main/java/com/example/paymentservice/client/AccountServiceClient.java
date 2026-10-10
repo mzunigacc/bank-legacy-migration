@@ -1,6 +1,10 @@
 package com.example.paymentservice.client;
 
 import com.example.paymentservice.dto.DebitRequest;
+import com.example.paymentservice.dto.CreditRequest;
+import com.example.paymentservice.dto.CreditResult;
+import com.example.paymentservice.dto.AccountTransferRequest;
+import com.example.paymentservice.dto.AccountTransferResult;
 import com.example.paymentservice.dto.DebitResult;
 import com.example.paymentservice.exception.AccountNotFoundException;
 import com.example.paymentservice.exception.AccountServiceUnavailableException;
@@ -54,6 +58,99 @@ public class AccountServiceClient {
                         }
                 )
                 .body(DebitResult.class);
+    }
+
+    @CircuitBreaker(
+            name = "accountService",
+            fallbackMethod = "creditFallback"
+    )
+    @Bulkhead(name = "accountService")
+    public CreditResult credit(
+            Long cuentaId,
+            BigDecimal monto,
+            String bearerToken
+    ) {
+
+        return restClient.post()
+                .uri("/internal/accounts/{cuentaId}/credit", cuentaId)
+                .header(HttpHeaders.AUTHORIZATION, bearerToken)
+                .body(new CreditRequest(monto))
+                .retrieve()
+                .onStatus(
+                        status -> status.value() == 404,
+                        (request, response) -> {
+                            throw new AccountNotFoundException(cuentaId);
+                        }
+                )
+                .body(CreditResult.class);
+    }
+
+    @CircuitBreaker(
+            name = "accountService",
+            fallbackMethod = "transferFallback"
+    )
+    @Bulkhead(name = "accountService")
+    public AccountTransferResult transfer(
+            Long cuentaOrigenId,
+            Long cuentaDestinoId,
+            BigDecimal monto,
+            String bearerToken
+    ) {
+
+        return restClient.post()
+                .uri("/internal/accounts/{cuentaId}/transfer", cuentaOrigenId)
+                .header(HttpHeaders.AUTHORIZATION, bearerToken)
+                .body(new AccountTransferRequest(
+                        cuentaDestinoId,
+                        monto
+                ))
+                .retrieve()
+                .onStatus(
+                        status -> status.value() == 404,
+                        (request, response) -> {
+                            throw new AccountNotFoundException(cuentaOrigenId);
+                        }
+                )
+                .onStatus(
+                        status -> status.value() == 409,
+                        (request, response) -> {
+                            throw new InsufficientFundsException();
+                        }
+                )
+                .body(AccountTransferResult.class);
+    }
+
+    private CreditResult creditFallback(
+            Long cuentaId,
+            BigDecimal monto,
+            String bearerToken,
+            Throwable throwable
+    ) {
+
+        if (throwable instanceof AccountNotFoundException accountNotFound) {
+            throw accountNotFound;
+        }
+
+        throw new AccountServiceUnavailableException(throwable);
+    }
+
+    private AccountTransferResult transferFallback(
+            Long cuentaOrigenId,
+            Long cuentaDestinoId,
+            BigDecimal monto,
+            String bearerToken,
+            Throwable throwable
+    ) {
+
+        if (throwable instanceof AccountNotFoundException accountNotFound) {
+            throw accountNotFound;
+        }
+
+        if (throwable instanceof InsufficientFundsException insufficientFunds) {
+            throw insufficientFunds;
+        }
+
+        throw new AccountServiceUnavailableException(throwable);
     }
 
     private DebitResult debitFallback(
