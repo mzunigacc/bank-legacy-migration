@@ -2,6 +2,7 @@ package com.example.paymentservice;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestClient;
 
@@ -13,6 +14,7 @@ public class PaymentServiceApplication {
     }
 
     @Bean
+    @LoadBalanced
     RestClient.Builder restClientBuilder() {
         return RestClient.builder();
     }

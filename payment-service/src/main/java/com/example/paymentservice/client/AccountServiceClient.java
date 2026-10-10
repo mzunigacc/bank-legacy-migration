@@ -4,7 +4,6 @@ import com.example.paymentservice.dto.DebitRequest;
 import com.example.paymentservice.dto.DebitResult;
 import com.example.paymentservice.exception.AccountNotFoundException;
 import com.example.paymentservice.exception.InsufficientFundsException;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -14,14 +13,13 @@ import java.math.BigDecimal;
 @Component
 public class AccountServiceClient {
 
+    private static final String ACCOUNT_SERVICE_URL = "http://account-service";
+
     private final RestClient restClient;
 
-    public AccountServiceClient(
-            RestClient.Builder builder,
-            @Value("${account-service.url}") String accountServiceUrl
-    ) {
+    public AccountServiceClient(RestClient.Builder builder) {
         this.restClient = builder
-                .baseUrl(accountServiceUrl)
+                .baseUrl(ACCOUNT_SERVICE_URL)
                 .build();
     }
 
