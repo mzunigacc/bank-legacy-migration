@@ -282,6 +282,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: bankpass
       SPRING_BATCH_JDBC_INITIALIZE_SCHEMA: never
       SPRING_BATCH_JOB_ENABLED: "false"
+    volumes:
+      - ./data:/data:ro
     depends_on:
       postgres:
         condition: service_healthy
