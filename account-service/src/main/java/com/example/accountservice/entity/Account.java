@@ -42,6 +42,29 @@ public class Account {
     protected Account() {
     }
 
+    public Account(
+            Long cuentaId,
+            String nombre,
+            Integer edad,
+            String tipo,
+            BigDecimal saldoInicial) {
+
+        this.cuentaId = cuentaId;
+        this.nombre = nombre;
+        this.edad = edad;
+        this.tipo = tipo;
+
+        /*
+         * En una cuenta recién abierta todavía no existe
+         * interés calculado por el proceso batch.
+         */
+        this.saldo = saldoInicial;
+        this.interes = BigDecimal.ZERO;
+        this.saldoFinal = saldoInicial;
+        this.anomalia = false;
+        this.motivo = null;
+    }
+
     public Long getCuentaId() {
         return cuentaId;
     }
@@ -76,6 +99,10 @@ public class Account {
 
     public String getMotivo() {
         return motivo;
+    }
+
+    public void setTipo(String tipo) {
+        this.tipo = tipo;
     }
 
     public void setSaldoFinal(BigDecimal saldoFinal) {

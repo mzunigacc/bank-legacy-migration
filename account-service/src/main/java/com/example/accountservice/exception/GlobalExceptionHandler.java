@@ -11,6 +11,18 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(AccountAlreadyExistsException.class)
+    public ResponseEntity<Map<String, String>> handleAccountAlreadyExists(
+            AccountAlreadyExistsException exception) {
+
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(Map.of(
+                        "error", "ACCOUNT_ALREADY_EXISTS",
+                        "message", exception.getMessage()
+                ));
+    }
+
     @ExceptionHandler(AccountNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleAccountNotFound(
             AccountNotFoundException exception) {
