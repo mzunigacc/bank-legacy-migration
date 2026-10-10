@@ -125,7 +125,6 @@ services:
     build:
       context: ./account-service
     image: bank-account-service:eft
-    container_name: bank-account-service
     environment:
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
@@ -148,7 +147,6 @@ services:
     build:
       context: ./payment-service
     image: bank-payment-service:eft
-    container_name: bank-payment-service
     environment:
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
@@ -176,7 +174,6 @@ services:
     build:
       context: ./customer-service
     image: bank-customer-service:eft
-    container_name: bank-customer-service
     environment:
       CONFIG_SERVER_URL: http://config-server:8888
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
