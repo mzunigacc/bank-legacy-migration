@@ -20,18 +20,22 @@ public class TransactionWriter implements ItemWriter<Transaction> {
         for (Transaction transaction : transactions) {
 
             jdbcTemplate.update(
-                """
-                INSERT INTO transacciones
-                (id, fecha, monto, tipo, anomalia, motivo)
-                VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT (id) DO NOTHING
-                """,
-                transaction.getId(),
-                transaction.getFecha(),
-                transaction.getMonto(),
-                transaction.getTipo(),
-                transaction.isAnomalia(),
-                transaction.getMotivo()
+                    """
+                    INSERT INTO transacciones
+                    (id, fecha, monto, tipo, anomalia, motivo)
+                    VALUES (?, ?, ?, ?, false, null)
+                    ON CONFLICT (id)
+                    DO UPDATE SET
+                        fecha = EXCLUDED.fecha,
+                        monto = EXCLUDED.monto,
+                        tipo = EXCLUDED.tipo,
+                        anomalia = false,
+                        motivo = null
+                    """,
+                    transaction.getId(),
+                    transaction.getFecha(),
+                    transaction.getMonto(),
+                    transaction.getTipo()
             );
         }
     }

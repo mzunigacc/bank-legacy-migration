@@ -1,7 +1,5 @@
 package com.example.banklegacymigration.interest;
 
-import java.math.BigDecimal;
-
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
@@ -23,7 +21,7 @@ public class InterestReader {
                 .name("interestItemReader")
                 .resource(
                         new FileSystemResource(
-                                "data/intereses.csv"
+                                "../data/semana3/intereses_trimestrales.csv"
                         )
                 )
                 .linesToSkip(1)
@@ -38,10 +36,8 @@ public class InterestReader {
                 .fieldSetMapper(fieldSet -> new InterestAccount(
                         fieldSet.readLong("cuenta_id"),
                         fieldSet.readString("nombre"),
-                        new BigDecimal(
-                                fieldSet.readString("saldo")
-                        ),
-                        fieldSet.readInt("edad"),
+                        fieldSet.readString("saldo"),
+                        fieldSet.readString("edad"),
                         fieldSet.readString("tipo")
                 ))
                 .currentItemCount(start)

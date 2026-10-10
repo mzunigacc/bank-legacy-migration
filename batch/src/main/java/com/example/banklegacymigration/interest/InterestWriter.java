@@ -34,8 +34,17 @@ public class InterestWriter
                         anomalia,
                         motivo
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT (cuenta_id) DO NOTHING
+                    VALUES (?, ?, ?, ?, ?, ?, ?, false, null)
+                    ON CONFLICT (cuenta_id)
+                    DO UPDATE SET
+                        nombre = EXCLUDED.nombre,
+                        saldo = EXCLUDED.saldo,
+                        edad = EXCLUDED.edad,
+                        tipo = EXCLUDED.tipo,
+                        interes = EXCLUDED.interes,
+                        saldo_final = EXCLUDED.saldo_final,
+                        anomalia = false,
+                        motivo = null
                     """,
                     account.getCuentaId(),
                     account.getNombre(),
@@ -43,9 +52,7 @@ public class InterestWriter
                     account.getEdad(),
                     account.getTipo(),
                     account.getInteres(),
-                    account.getSaldoFinal(),
-                    account.isAnomalia(),
-                    account.getMotivo()
+                    account.getSaldoFinal()
             );
         }
     }

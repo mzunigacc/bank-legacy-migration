@@ -6,6 +6,10 @@ public class InterestAccount {
 
     private Long cuentaId;
     private String nombre;
+
+    private String saldoRaw;
+    private String edadRaw;
+
     private BigDecimal saldo;
     private Integer edad;
     private String tipo;
@@ -13,29 +17,21 @@ public class InterestAccount {
     private BigDecimal interes;
     private BigDecimal saldoFinal;
 
-    private boolean anomalia;
-    private String motivo;
-
     public InterestAccount() {
     }
 
     public InterestAccount(
             Long cuentaId,
             String nombre,
-            BigDecimal saldo,
-            Integer edad,
+            String saldoRaw,
+            String edadRaw,
             String tipo) {
 
         this.cuentaId = cuentaId;
         this.nombre = nombre;
-        this.saldo = saldo;
-        this.edad = edad;
+        this.saldoRaw = saldoRaw;
+        this.edadRaw = edadRaw;
         this.tipo = tipo;
-
-        this.interes = BigDecimal.ZERO;
-        this.saldoFinal = saldo;
-        this.anomalia = false;
-        this.motivo = null;
     }
 
     public Long getCuentaId() {
@@ -52,6 +48,22 @@ public class InterestAccount {
 
     public void setNombre(String nombre) {
         this.nombre = nombre;
+    }
+
+    public String getSaldoRaw() {
+        return saldoRaw;
+    }
+
+    public void setSaldoRaw(String saldoRaw) {
+        this.saldoRaw = saldoRaw;
+    }
+
+    public String getEdadRaw() {
+        return edadRaw;
+    }
+
+    public void setEdadRaw(String edadRaw) {
+        this.edadRaw = edadRaw;
     }
 
     public BigDecimal getSaldo() {
@@ -92,21 +104,5 @@ public class InterestAccount {
 
     public void setSaldoFinal(BigDecimal saldoFinal) {
         this.saldoFinal = saldoFinal;
-    }
-
-    public boolean isAnomalia() {
-        return anomalia;
-    }
-
-    public void setAnomalia(boolean anomalia) {
-        this.anomalia = anomalia;
-    }
-
-    public String getMotivo() {
-        return motivo;
-    }
-
-    public void setMotivo(String motivo) {
-        this.motivo = motivo;
     }
 }

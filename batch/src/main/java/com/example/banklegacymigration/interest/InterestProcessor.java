@@ -1,6 +1,7 @@
 package com.example.banklegacymigration.interest;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,49 +24,55 @@ public class InterestProcessor
     @Override
     public InterestAccount process(InterestAccount account) {
 
-        log.info(
-                "Procesando cuenta id={} en hilo={}",
-                account.getCuentaId(),
-                Thread.currentThread().getName()
-        );
+        validarIdentidad(account);
 
-        validarCuenta(account);
+        BigDecimal saldo = parseSaldo(account);
+        Integer edad = parseEdad(account);
+        String tipo = normalizarTipo(account);
 
-        if (account.getSaldo().compareTo(BigDecimal.ZERO) <= 0) {
-            account.setAnomalia(true);
-            account.setMotivo("Saldo menor o igual a cero");
+        BigDecimal tasa;
+
+        if ("ahorro".equals(tipo)) {
+            tasa = TASA_AHORRO;
+        } else if ("prestamo".equals(tipo)) {
+            tasa = TASA_PRESTAMO;
+        } else {
+            throw new InvalidInterestAccountException(
+                    "Tipo de cuenta no procesable: "
+                            + account.getTipo()
+                            + " para ID: "
+                            + account.getCuentaId()
+            );
         }
 
-        String tipo = account.getTipo().toLowerCase();
+        BigDecimal interes = saldo
+                .multiply(tasa)
+                .setScale(2, RoundingMode.HALF_UP);
 
-        BigDecimal interes = BigDecimal.ZERO;
+        BigDecimal saldoFinal = saldo
+                .add(interes)
+                .setScale(2, RoundingMode.HALF_UP);
 
-        if (tipo.equals("ahorro")) {
-
-            interes = account.getSaldo()
-                    .multiply(TASA_AHORRO);
-
-        } else if (tipo.equals("prestamo")) {
-
-            interes = account.getSaldo()
-                    .multiply(TASA_PRESTAMO);
-
-        } else if (tipo.equals("hipoteca")) {
-
-            account.setAnomalia(true);
-            account.setMotivo("Tipo de cuenta no contemplado");
-        }
-
+        account.setSaldo(saldo);
+        account.setEdad(edad);
+        account.setTipo(tipo);
         account.setInteres(interes);
+        account.setSaldoFinal(saldoFinal);
 
-        account.setSaldoFinal(
-                account.getSaldo().add(interes)
+        log.info(
+                "Procesada cuenta id={} saldo={} edad={} tipo={} interes={} hilo={}",
+                account.getCuentaId(),
+                saldo,
+                edad,
+                tipo,
+                interes,
+                Thread.currentThread().getName()
         );
 
         return account;
     }
 
-    private void validarCuenta(InterestAccount account) {
+    private void validarIdentidad(InterestAccount account) {
 
         if (account.getCuentaId() == null
                 || account.getCuentaId() <= 0) {
@@ -85,27 +92,92 @@ public class InterestProcessor
             );
         }
 
-        if (account.getTipo() == null
-                || account.getTipo().isBlank()) {
+        account.setNombre(account.getNombre().trim());
+    }
 
+    private BigDecimal parseSaldo(InterestAccount account) {
+
+        String raw = account.getSaldoRaw();
+
+        if (raw == null || raw.isBlank()) {
             throw new InvalidInterestAccountException(
-                    "Tipo de cuenta vacío para ID: "
+                    "Saldo vacío para ID: "
                             + account.getCuentaId()
             );
         }
 
-        String tipo = account.getTipo().toLowerCase();
+        try {
+            BigDecimal saldo = new BigDecimal(raw.trim());
 
-        if (!tipo.equals("ahorro")
-                && !tipo.equals("prestamo")
-                && !tipo.equals("hipoteca")) {
+            if (saldo.compareTo(BigDecimal.ZERO) < 0) {
+                throw new InvalidInterestAccountException(
+                        "Saldo negativo: "
+                                + raw
+                                + " para ID: "
+                                + account.getCuentaId()
+                );
+            }
 
+            return saldo;
+
+        } catch (NumberFormatException e) {
             throw new InvalidInterestAccountException(
-                    "Tipo de cuenta inválido: "
-                            + account.getTipo()
+                    "Saldo inválido: "
+                            + raw
                             + " para ID: "
                             + account.getCuentaId()
             );
         }
+    }
+
+    private Integer parseEdad(InterestAccount account) {
+
+        String raw = account.getEdadRaw();
+
+        if (raw == null || raw.isBlank()) {
+            throw new InvalidInterestAccountException(
+                    "Edad vacía para ID: "
+                            + account.getCuentaId()
+            );
+        }
+
+        try {
+            int edad = Integer.parseInt(raw.trim());
+
+            if (edad < 18 || edad > 100) {
+                throw new InvalidInterestAccountException(
+                        "Edad fuera de rango: "
+                                + edad
+                                + " para ID: "
+                                + account.getCuentaId()
+                );
+            }
+
+            return edad;
+
+        } catch (NumberFormatException e) {
+            throw new InvalidInterestAccountException(
+                    "Edad inválida: "
+                            + raw
+                            + " para ID: "
+                            + account.getCuentaId()
+            );
+        }
+    }
+
+    private String normalizarTipo(InterestAccount account) {
+
+        if (account.getTipo() == null
+                || account.getTipo().isBlank()) {
+
+            throw new InvalidInterestAccountException(
+                    "Tipo vacío para ID: "
+                            + account.getCuentaId()
+            );
+        }
+
+        return account.getTipo()
+                .trim()
+                .toLowerCase();
     }
 }

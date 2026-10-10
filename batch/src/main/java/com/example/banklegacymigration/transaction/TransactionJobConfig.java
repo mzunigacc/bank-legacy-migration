@@ -116,9 +116,7 @@ public class TransactionJobConfig {
                                 fecha,
                                 COUNT(*),
                                 COALESCE(SUM(monto), 0),
-                                COUNT(*) FILTER (
-                                    WHERE anomalia = true
-                                )
+                                0
                             FROM transacciones
                             GROUP BY fecha
 

@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict lLUAv4F0nwb2hb8zOLpJOpTSjVbTozykakmp0HPyZHDogBqqNxcBuPVf9kMhEcZ
+\restrict vf86Xd6QGYw2VXnOkDosKbJrtEt8xlN5cbnXuHo2YjRmWmLsUgoWUbrXnHFOtXj
 
 -- Dumped from database version 18.6 (Homebrew)
 -- Dumped by pg_dump version 18.6 (Homebrew)
@@ -29,6 +29,7 @@ ALTER TABLE IF EXISTS ONLY public.transacciones DROP CONSTRAINT IF EXISTS transa
 ALTER TABLE IF EXISTS ONLY public.retiros_atm DROP CONSTRAINT IF EXISTS retiros_atm_pkey;
 ALTER TABLE IF EXISTS ONLY public.resumen_transacciones_diarias DROP CONSTRAINT IF EXISTS resumen_transacciones_diarias_pkey;
 ALTER TABLE IF EXISTS ONLY public.resumen_anual DROP CONSTRAINT IF EXISTS resumen_anual_pkey;
+ALTER TABLE IF EXISTS ONLY public.payment_operations DROP CONSTRAINT IF EXISTS payment_operations_pkey;
 ALTER TABLE IF EXISTS ONLY public.batch_job_instance DROP CONSTRAINT IF EXISTS job_inst_un;
 ALTER TABLE IF EXISTS ONLY public.intereses DROP CONSTRAINT IF EXISTS intereses_pkey;
 ALTER TABLE IF EXISTS ONLY public.estados_cuenta DROP CONSTRAINT IF EXISTS estados_cuenta_pkey;
@@ -38,11 +39,14 @@ ALTER TABLE IF EXISTS ONLY public.batch_job_instance DROP CONSTRAINT IF EXISTS b
 ALTER TABLE IF EXISTS ONLY public.batch_job_execution DROP CONSTRAINT IF EXISTS batch_job_execution_pkey;
 ALTER TABLE IF EXISTS ONLY public.batch_job_execution_context DROP CONSTRAINT IF EXISTS batch_job_execution_context_pkey;
 ALTER TABLE IF EXISTS public.retiros_atm ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.payment_operations ALTER COLUMN id DROP DEFAULT;
 DROP TABLE IF EXISTS public.transacciones;
 DROP SEQUENCE IF EXISTS public.retiros_atm_id_seq;
 DROP TABLE IF EXISTS public.retiros_atm;
 DROP TABLE IF EXISTS public.resumen_transacciones_diarias;
 DROP TABLE IF EXISTS public.resumen_anual;
+DROP SEQUENCE IF EXISTS public.payment_operations_id_seq;
+DROP TABLE IF EXISTS public.payment_operations;
 DROP TABLE IF EXISTS public.intereses;
 DROP TABLE IF EXISTS public.estados_cuenta;
 DROP SEQUENCE IF EXISTS public.batch_step_execution_seq;
@@ -220,6 +224,39 @@ CREATE TABLE public.intereses (
 
 
 --
+-- Name: payment_operations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.payment_operations (
+    id bigint NOT NULL,
+    operation_type character varying(50) NOT NULL,
+    source_account_id bigint,
+    target_account_id bigint NOT NULL,
+    amount numeric(15,2) NOT NULL,
+    created_at timestamp without time zone NOT NULL
+);
+
+
+--
+-- Name: payment_operations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.payment_operations_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: payment_operations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.payment_operations_id_seq OWNED BY public.payment_operations.id;
+
+
+--
 -- Name: resumen_anual; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -291,6 +328,13 @@ CREATE TABLE public.transacciones (
 
 
 --
+-- Name: payment_operations id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payment_operations ALTER COLUMN id SET DEFAULT nextval('public.payment_operations_id_seq'::regclass);
+
+
+--
 -- Name: retiros_atm id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -359,6 +403,13 @@ COPY public.batch_job_execution (job_execution_id, version, job_instance_id, cre
 54	2	52	2026-08-30 19:40:44.741394	2026-08-30 19:40:44.758926	2026-08-30 19:40:45.804714	COMPLETED	COMPLETED		2026-08-30 19:40:45.804949
 56	2	54	2026-08-30 19:55:52.035992	2026-08-30 19:55:52.056286	2026-08-30 19:55:53.034538	COMPLETED	COMPLETED		2026-08-30 19:55:53.034966
 57	2	55	2026-08-30 19:59:02.734083	2026-08-30 19:59:02.793399	2026-08-30 19:59:03.007328	COMPLETED	COMPLETED		2026-08-30 19:59:03.0082
+58	2	1	2026-10-09 07:59:25.234324	2026-10-09 07:59:25.319163	2026-10-09 07:59:25.428771	FAILED	FAILED	java.lang.IllegalStateException: No se pudo contar los registros de data/semana3/movimientos_financieros_diarios.csv\n\tat com.example.banklegacymigration.transaction.TransactionPartitioner.countRecords(TransactionPartitioner.java:64)\n\tat com.example.banklegacymigration.transaction.TransactionPartitioner.partition(TransactionPartitioner.java:26)\n\tat org.springframework.batch.core.partition.support.SimpleStepExecutionSplitter.getContexts(SimpleStepExecutionSplitter.java:191)\n\tat org.springframework.batch.core.partition.support.SimpleStepExecutionSplitter.split(SimpleStepExecutionSplitter.java:151)\n\tat org.springframework.batch.core.partition.support.AbstractPartitionHandler.handle(AbstractPartitionHandler.java:58)\n\tat org.springframework.batch.core.partition.support.PartitionStep.doExecute(PartitionStep.java:102)\n\tat org.springframework.batch.core.step.AbstractStep.execute(AbstractStep.java:230)\n\tat org.springframework.batch.core.job.SimpleStepHandler.handleStep(SimpleStepHandler.java:153)\n\tat org.springframework.batch.core.job.AbstractJob.handleStep(AbstractJob.java:408)\n\tat org.springframework.batch.core.job.SimpleJob.doExecute(SimpleJob.java:127)\n\tat org.springframework.batch.core.job.AbstractJob.execute(AbstractJob.java:307)\n\tat org.springframework.batch.core.launch.support.TaskExecutorJobLauncher$1.run(TaskExecutorJobLauncher.java:155)\n\tat org.springframework.core.task.SyncTaskExecutor.execute(SyncTaskExecutor.java:48)\n\tat org.springframework.batch.core.launch.support.TaskExecutorJobLauncher.run(TaskExecutorJobLauncher.java:146)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.execute(JobLauncherApplicationRunner.java:210)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.executeLocalJobs(JobLauncherApplicationRunner.java:194)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.launchJobFromProperties(JobLauncherApplicationRunner.java:174)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.run(JobLauncherApplicationRunner.java:169)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.run(JobLauncherApplicationRunner.java:164)\n\tat org.springframework.boot.SpringApplication.lambda$callRunner$4(SpringApplication.java:784)\n\tat org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82)\n\tat org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60)\n\tat org.springf	2026-10-09 07:59:25.429462
+59	2	56	2026-10-09 08:00:26.837162	2026-10-09 08:00:26.869807	2026-10-09 08:00:27.441945	COMPLETED	COMPLETED		2026-10-09 08:00:27.442018
+60	2	57	2026-10-09 08:03:22.815076	2026-10-09 08:03:22.830619	2026-10-09 08:03:23.633667	COMPLETED	COMPLETED		2026-10-09 08:03:23.633725
+61	2	58	2026-10-09 08:07:14.141796	2026-10-09 08:07:14.206164	2026-10-09 08:07:14.877306	COMPLETED	COMPLETED		2026-10-09 08:07:14.877388
+62	2	59	2026-10-09 08:11:00.548606	2026-10-09 08:11:00.562616	2026-10-09 08:11:00.9533	COMPLETED	COMPLETED		2026-10-09 08:11:00.953362
+63	2	60	2026-10-09 08:13:28.871249	2026-10-09 08:13:28.885545	2026-10-09 08:13:29.336957	FAILED	FAILED	org.springframework.batch.core.JobExecutionException: Partition handler returned an unsuccessful step\n\tat org.springframework.batch.core.partition.support.PartitionStep.doExecute(PartitionStep.java:108)\n\tat org.springframework.batch.core.step.AbstractStep.execute(AbstractStep.java:230)\n\tat org.springframework.batch.core.job.SimpleStepHandler.handleStep(SimpleStepHandler.java:153)\n\tat org.springframework.batch.core.job.AbstractJob.handleStep(AbstractJob.java:408)\n\tat org.springframework.batch.core.job.SimpleJob.doExecute(SimpleJob.java:127)\n\tat org.springframework.batch.core.job.AbstractJob.execute(AbstractJob.java:307)\n\tat org.springframework.batch.core.launch.support.TaskExecutorJobLauncher$1.run(TaskExecutorJobLauncher.java:155)\n\tat org.springframework.core.task.SyncTaskExecutor.execute(SyncTaskExecutor.java:48)\n\tat org.springframework.batch.core.launch.support.TaskExecutorJobLauncher.run(TaskExecutorJobLauncher.java:146)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.execute(JobLauncherApplicationRunner.java:210)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.executeLocalJobs(JobLauncherApplicationRunner.java:194)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.launchJobFromProperties(JobLauncherApplicationRunner.java:174)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.run(JobLauncherApplicationRunner.java:169)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.run(JobLauncherApplicationRunner.java:164)\n\tat org.springframework.boot.SpringApplication.lambda$callRunner$4(SpringApplication.java:784)\n\tat org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82)\n\tat org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60)\n\tat org.springframework.util.function.ThrowingConsumer$1.accept(ThrowingConsumer.java:86)\n\tat org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:796)\n\tat org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:784)\n\tat org.springframework.boot.SpringApplication.lambda$callRunners$3(SpringApplication.java:772)\n\tat java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:183)\n\tat java.base/java.util.stream.SortedOps$SizedRefSortingSink.end(SortedOps.java:357)\n\tat java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:510)\n\tat java.base/java.ut	2026-10-09 08:13:29.337107
+64	2	61	2026-10-09 08:14:39.151435	2026-10-09 08:14:39.16548	2026-10-09 08:14:39.577565	COMPLETED	COMPLETED		2026-10-09 08:14:39.57765
 \.
 
 
@@ -416,14 +467,21 @@ COPY public.batch_job_execution_context (job_execution_id, short_context, serial
 57	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
 46	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
 47	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
+58	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
 48	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
 49	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
 50	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
+59	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
 51	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
 52	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
 53	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
+60	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
 54	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
 55	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
+61	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
+62	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
+63	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
+64	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAABdAANYmF0Y2gudmVyc2lvbnQABTUuMi40eA==	\N
 \.
 
 
@@ -484,6 +542,12 @@ COPY public.batch_job_execution_params (job_execution_id, parameter_name, parame
 55	run.id	java.lang.String	403	Y
 56	run.id	java.lang.String	501	Y
 57	run.id	java.lang.String	502	Y
+59	run.id	java.lang.String	1	Y
+60	run.id	java.lang.String	3	Y
+61	run.id	java.lang.String	1791544030	Y
+62	run.id	java.lang.String	1791544257	Y
+63	run.id	java.lang.String	1791544406	Y
+64	run.id	java.lang.String	1791544476	Y
 \.
 
 
@@ -547,6 +611,12 @@ COPY public.batch_job_instance (job_instance_id, version, job_name, job_key) FRO
 53	0	transactionJob	d510021acbef6f7836d580ba929fa10e
 54	0	transactionJob	5f6ff01186b0d1d9198f9dd79ac3567b
 55	0	transactionJob	4ed393fea21edd3d4ce288b00a050ac2
+56	0	transactionJob	5bb7104a32fa560765cd6496f41f548c
+57	0	transactionJob	7bdb69b8f015a742549fc6b8e5a7e327
+58	0	transactionJob	6d8c18f9238cd1cb6cecb730f44cd722
+59	0	interestJob	a1912e0c37279ed700f20a61979e33af
+60	0	statementJob	bec8882f713edf73e1e5628a3e793cad
+61	0	statementJob	5261caea6c671deb4806c82c9fe2f91a
 \.
 
 
@@ -699,13 +769,36 @@ COPY public.batch_step_execution (step_execution_id, version, step_name, job_exe
 141	4	transactionWorkerStep:partition1	55	2026-08-30 19:43:53.919722	2026-08-30 19:43:53.932692	2026-08-30 19:43:53.983108	COMPLETED	2	5	0	5	0	0	0	0	COMPLETED		2026-08-30 19:43:53.985199
 142	4	transactionWorkerStep:partition0	55	2026-08-30 19:43:53.921838	2026-08-30 19:43:53.932224	2026-08-30 19:43:53.984225	COMPLETED	2	5	0	5	0	0	0	0	COMPLETED		2026-08-30 19:43:53.986159
 144	2	transactionPartitionStep	56	2026-08-30 19:55:52.067028	2026-08-30 19:55:52.070674	2026-08-30 19:55:53.015332	COMPLETED	4	10	0	10	0	0	0	0	COMPLETED		2026-08-30 19:55:53.017095
+161	2	transactionPartitionStep	61	2026-10-09 08:07:14.220094	2026-10-09 08:07:14.222838	2026-10-09 08:07:14.85809	COMPLETED	12	1000	0	392	0	0	608	608	COMPLETED		2026-10-09 08:07:14.858943
+156	3	dailySummaryStep	59	2026-10-09 08:00:27.421492	2026-10-09 08:00:27.422739	2026-10-09 08:00:27.439384	COMPLETED	1	0	0	0	0	0	0	0	COMPLETED		2026-10-09 08:00:27.440061
 145	4	transactionWorkerStep:partition0	56	2026-08-30 19:55:52.943082	2026-08-30 19:55:52.955542	2026-08-30 19:55:53.011496	COMPLETED	2	5	0	5	0	0	0	0	COMPLETED		2026-08-30 19:55:53.013481
 146	4	transactionWorkerStep:partition1	56	2026-08-30 19:55:52.939644	2026-08-30 19:55:52.955592	2026-08-30 19:55:53.01163	COMPLETED	2	5	0	5	0	0	0	0	COMPLETED		2026-08-30 19:55:53.013806
 147	3	dailySummaryStep	56	2026-08-30 19:55:53.021686	2026-08-30 19:55:53.023596	2026-08-30 19:55:53.030686	COMPLETED	1	0	0	0	0	0	0	0	COMPLETED		2026-08-30 19:55:53.031885
+166	8	interestWorkerStep:partition0	62	2026-10-09 08:11:00.58126	2026-10-09 08:11:00.586782	2026-10-09 08:11:00.934159	COMPLETED	6	500	0	137	0	0	363	363	COMPLETED		2026-10-09 08:11:00.940872
+159	8	transactionWorkerStep:partition0	60	2026-10-09 08:03:22.861887	2026-10-09 08:03:22.866747	2026-10-09 08:03:23.614094	COMPLETED	6	500	0	204	0	0	296	296	COMPLETED		2026-10-09 08:03:23.614862
+157	2	transactionPartitionStep	60	2026-10-09 08:03:22.843545	2026-10-09 08:03:22.846225	2026-10-09 08:03:23.615778	COMPLETED	12	1000	0	392	0	0	608	608	COMPLETED		2026-10-09 08:03:23.616475
+168	2	statementPartitionStep	63	2026-10-09 08:13:28.898217	2026-10-09 08:13:28.901346	2026-10-09 08:13:29.332871	FAILED	3	500	0	249	0	0	76	80	FAILED	org.springframework.batch.core.JobExecutionException: Partition handler returned an unsuccessful step\n\tat org.springframework.batch.core.partition.support.PartitionStep.doExecute(PartitionStep.java:108)\n\tat org.springframework.batch.core.step.AbstractStep.execute(AbstractStep.java:230)\n\tat org.springframework.batch.core.job.SimpleStepHandler.handleStep(SimpleStepHandler.java:153)\n\tat org.springframework.batch.core.job.AbstractJob.handleStep(AbstractJob.java:408)\n\tat org.springframework.batch.core.job.SimpleJob.doExecute(SimpleJob.java:127)\n\tat org.springframework.batch.core.job.AbstractJob.execute(AbstractJob.java:307)\n\tat org.springframework.batch.core.launch.support.TaskExecutorJobLauncher$1.run(TaskExecutorJobLauncher.java:155)\n\tat org.springframework.core.task.SyncTaskExecutor.execute(SyncTaskExecutor.java:48)\n\tat org.springframework.batch.core.launch.support.TaskExecutorJobLauncher.run(TaskExecutorJobLauncher.java:146)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.execute(JobLauncherApplicationRunner.java:210)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.executeLocalJobs(JobLauncherApplicationRunner.java:194)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.launchJobFromProperties(JobLauncherApplicationRunner.java:174)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.run(JobLauncherApplicationRunner.java:169)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.run(JobLauncherApplicationRunner.java:164)\n\tat org.springframework.boot.SpringApplication.lambda$callRunner$4(SpringApplication.java:784)\n\tat org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82)\n\tat org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60)\n\tat org.springframework.util.function.ThrowingConsumer$1.accept(ThrowingConsumer.java:86)\n\tat org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:796)\n\tat org.springframework.boot.SpringApplication.callRunner(SpringApplication.java:784)\n\tat org.springframework.boot.SpringApplication.lambda$callRunners$3(SpringApplication.java:772)\n\tat java.base/java.util.stream.ForEachOps$ForEachOp$OfRef.accept(ForEachOps.java:183)\n\tat java.base/java.util.stream.SortedOps$SizedRefSortingSink.end(SortedOps.java:357)\n\tat java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:510)\n\tat java.base/java.ut	2026-10-09 08:13:29.334204
 150	4	transactionWorkerStep:partition0	57	2026-08-30 19:59:02.859325	2026-08-30 19:59:02.867117	2026-08-30 19:59:02.968357	COMPLETED	2	6	0	6	0	0	0	0	COMPLETED		2026-08-30 19:59:02.973141
 149	4	transactionWorkerStep:partition1	57	2026-08-30 19:59:02.857429	2026-08-30 19:59:02.867225	2026-08-30 19:59:02.973276	COMPLETED	2	5	0	4	1	0	1	1	COMPLETED		2026-08-30 19:59:02.975439
 148	2	transactionPartitionStep	57	2026-08-30 19:59:02.823777	2026-08-30 19:59:02.841731	2026-08-30 19:59:02.980608	COMPLETED	4	11	0	10	1	0	1	1	COMPLETED		2026-08-30 19:59:02.983239
+164	3	dailySummaryStep	61	2026-10-09 08:07:14.861877	2026-10-09 08:07:14.864925	2026-10-09 08:07:14.875413	COMPLETED	1	0	0	0	0	0	0	0	COMPLETED		2026-10-09 08:07:14.876011
+160	3	dailySummaryStep	60	2026-10-09 08:03:23.619758	2026-10-09 08:03:23.620816	2026-10-09 08:03:23.630885	COMPLETED	1	0	0	0	0	0	0	0	COMPLETED		2026-10-09 08:03:23.631553
 151	3	dailySummaryStep	57	2026-08-30 19:59:02.988668	2026-08-30 19:59:02.991658	2026-08-30 19:59:03.002192	COMPLETED	1	0	0	0	0	0	0	0	COMPLETED		2026-08-30 19:59:03.004156
+155	8	transactionWorkerStep:partition0	59	2026-10-09 08:00:26.907129	2026-10-09 08:00:26.91294	2026-10-09 08:00:27.397679	COMPLETED	6	500	0	98	0	0	402	402	COMPLETED		2026-10-09 08:00:27.400311
+152	2	transactionPartitionStep	58	2026-10-09 07:59:25.358064	2026-10-09 07:59:25.404148	2026-10-09 07:59:25.416073	FAILED	0	0	0	0	0	0	0	0	FAILED	java.lang.IllegalStateException: No se pudo contar los registros de data/semana3/movimientos_financieros_diarios.csv\n\tat com.example.banklegacymigration.transaction.TransactionPartitioner.countRecords(TransactionPartitioner.java:64)\n\tat com.example.banklegacymigration.transaction.TransactionPartitioner.partition(TransactionPartitioner.java:26)\n\tat org.springframework.batch.core.partition.support.SimpleStepExecutionSplitter.getContexts(SimpleStepExecutionSplitter.java:191)\n\tat org.springframework.batch.core.partition.support.SimpleStepExecutionSplitter.split(SimpleStepExecutionSplitter.java:151)\n\tat org.springframework.batch.core.partition.support.AbstractPartitionHandler.handle(AbstractPartitionHandler.java:58)\n\tat org.springframework.batch.core.partition.support.PartitionStep.doExecute(PartitionStep.java:102)\n\tat org.springframework.batch.core.step.AbstractStep.execute(AbstractStep.java:230)\n\tat org.springframework.batch.core.job.SimpleStepHandler.handleStep(SimpleStepHandler.java:153)\n\tat org.springframework.batch.core.job.AbstractJob.handleStep(AbstractJob.java:408)\n\tat org.springframework.batch.core.job.SimpleJob.doExecute(SimpleJob.java:127)\n\tat org.springframework.batch.core.job.AbstractJob.execute(AbstractJob.java:307)\n\tat org.springframework.batch.core.launch.support.TaskExecutorJobLauncher$1.run(TaskExecutorJobLauncher.java:155)\n\tat org.springframework.core.task.SyncTaskExecutor.execute(SyncTaskExecutor.java:48)\n\tat org.springframework.batch.core.launch.support.TaskExecutorJobLauncher.run(TaskExecutorJobLauncher.java:146)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.execute(JobLauncherApplicationRunner.java:210)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.executeLocalJobs(JobLauncherApplicationRunner.java:194)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.launchJobFromProperties(JobLauncherApplicationRunner.java:174)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.run(JobLauncherApplicationRunner.java:169)\n\tat org.springframework.boot.autoconfigure.batch.JobLauncherApplicationRunner.run(JobLauncherApplicationRunner.java:164)\n\tat org.springframework.boot.SpringApplication.lambda$callRunner$4(SpringApplication.java:784)\n\tat org.springframework.util.function.ThrowingConsumer$1.acceptWithException(ThrowingConsumer.java:82)\n\tat org.springframework.util.function.ThrowingConsumer.accept(ThrowingConsumer.java:60)\n\tat org.springf	2026-10-09 07:59:25.421033
+154	8	transactionWorkerStep:partition1	59	2026-10-09 08:00:26.905899	2026-10-09 08:00:26.912944	2026-10-09 08:00:27.413182	COMPLETED	6	500	0	111	0	0	389	389	COMPLETED		2026-10-09 08:00:27.414216
+153	2	transactionPartitionStep	59	2026-10-09 08:00:26.893907	2026-10-09 08:00:26.899339	2026-10-09 08:00:27.4172	COMPLETED	12	1000	0	209	0	0	791	791	COMPLETED		2026-10-09 08:00:27.418426
+169	2	statementWorkerStep:partition1	63	2026-10-09 08:13:28.90921	2026-10-09 08:13:28.918298	2026-10-09 08:13:29.165607	FAILED	0	100	0	0	0	0	13	15	FAILED	org.springframework.retry.ExhaustedRetryException: Retry exhausted after last attempt in recovery path, but exception is not skippable.\n\tat org.springframework.batch.core.step.item.FaultTolerantChunkProcessor.lambda$write$4(FaultTolerantChunkProcessor.java:401)\n\tat org.springframework.retry.support.RetryTemplate.handleRetryExhausted(RetryTemplate.java:573)\n\tat org.springframework.retry.support.RetryTemplate.doExecute(RetryTemplate.java:418)\n\tat org.springframework.retry.support.RetryTemplate.execute(RetryTemplate.java:276)\n\tat org.springframework.batch.core.step.item.BatchRetryTemplate.execute(BatchRetryTemplate.java:216)\n\tat org.springframework.batch.core.step.item.FaultTolerantChunkProcessor.write(FaultTolerantChunkProcessor.java:414)\n\tat org.springframework.batch.core.step.item.SimpleChunkProcessor.process(SimpleChunkProcessor.java:227)\n\tat org.springframework.batch.core.step.item.ChunkOrientedTasklet.execute(ChunkOrientedTasklet.java:75)\n\tat org.springframework.batch.core.step.tasklet.TaskletStep$ChunkTransactionCallback.doInTransaction(TaskletStep.java:383)\n\tat org.springframework.batch.core.step.tasklet.TaskletStep$ChunkTransactionCallback.doInTransaction(TaskletStep.java:307)\n\tat org.springframework.transaction.support.TransactionTemplate.execute(TransactionTemplate.java:140)\n\tat org.springframework.batch.core.step.tasklet.TaskletStep$2.doInChunkContext(TaskletStep.java:250)\n\tat org.springframework.batch.core.scope.context.StepContextRepeatCallback.doInIteration(StepContextRepeatCallback.java:82)\n\tat org.springframework.batch.repeat.support.RepeatTemplate.getNextResult(RepeatTemplate.java:369)\n\tat org.springframework.batch.repeat.support.RepeatTemplate.executeInternal(RepeatTemplate.java:206)\n\tat org.springframework.batch.repeat.support.RepeatTemplate.iterate(RepeatTemplate.java:140)\n\tat org.springframework.batch.core.step.tasklet.TaskletStep.doExecute(TaskletStep.java:235)\n\tat org.springframework.batch.core.step.AbstractStep.execute(AbstractStep.java:230)\n\tat org.springframework.batch.core.partition.support.TaskExecutorPartitionHandler.lambda$createTask$0(TaskExecutorPartitionHandler.java:132)\n\tat java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)\n\tat java.base/java.lang.Thread.run(Thread.java:840)\nCaused by: org.springframework.dao.DuplicateKeyExc	2026-10-09 08:13:29.169132
+158	8	transactionWorkerStep:partition1	60	2026-10-09 08:03:22.860928	2026-10-09 08:03:22.86689	2026-10-09 08:03:23.597793	COMPLETED	6	500	0	188	0	0	312	312	COMPLETED		2026-10-09 08:03:23.599166
+167	8	interestWorkerStep:partition1	62	2026-10-09 08:11:00.580095	2026-10-09 08:11:00.586778	2026-10-09 08:11:00.948871	COMPLETED	6	500	0	159	0	0	341	341	COMPLETED		2026-10-09 08:11:00.949681
+165	2	interestPartitionStep	62	2026-10-09 08:11:00.57091	2026-10-09 08:11:00.573941	2026-10-09 08:11:00.950967	COMPLETED	12	1000	0	296	0	0	704	704	COMPLETED		2026-10-09 08:11:00.951632
+163	8	transactionWorkerStep:partition1	61	2026-10-09 08:07:14.229027	2026-10-09 08:07:14.23544	2026-10-09 08:07:14.85389	COMPLETED	6	500	0	188	0	0	312	312	COMPLETED		2026-10-09 08:07:14.856143
+162	8	transactionWorkerStep:partition0	61	2026-10-09 08:07:14.229975	2026-10-09 08:07:14.235362	2026-10-09 08:07:14.855417	COMPLETED	6	500	0	204	0	0	296	296	COMPLETED		2026-10-09 08:07:14.856486
+170	5	statementWorkerStep:partition0	63	2026-10-09 08:13:28.912989	2026-10-09 08:13:28.918321	2026-10-09 08:13:29.329042	FAILED	3	400	0	249	0	0	63	65	FAILED	org.springframework.retry.ExhaustedRetryException: Retry exhausted after last attempt in recovery path, but exception is not skippable.\n\tat org.springframework.batch.core.step.item.FaultTolerantChunkProcessor.lambda$write$4(FaultTolerantChunkProcessor.java:401)\n\tat org.springframework.retry.support.RetryTemplate.handleRetryExhausted(RetryTemplate.java:573)\n\tat org.springframework.retry.support.RetryTemplate.doExecute(RetryTemplate.java:418)\n\tat org.springframework.retry.support.RetryTemplate.execute(RetryTemplate.java:276)\n\tat org.springframework.batch.core.step.item.BatchRetryTemplate.execute(BatchRetryTemplate.java:216)\n\tat org.springframework.batch.core.step.item.FaultTolerantChunkProcessor.write(FaultTolerantChunkProcessor.java:414)\n\tat org.springframework.batch.core.step.item.SimpleChunkProcessor.process(SimpleChunkProcessor.java:227)\n\tat org.springframework.batch.core.step.item.ChunkOrientedTasklet.execute(ChunkOrientedTasklet.java:75)\n\tat org.springframework.batch.core.step.tasklet.TaskletStep$ChunkTransactionCallback.doInTransaction(TaskletStep.java:383)\n\tat org.springframework.batch.core.step.tasklet.TaskletStep$ChunkTransactionCallback.doInTransaction(TaskletStep.java:307)\n\tat org.springframework.transaction.support.TransactionTemplate.execute(TransactionTemplate.java:140)\n\tat org.springframework.batch.core.step.tasklet.TaskletStep$2.doInChunkContext(TaskletStep.java:250)\n\tat org.springframework.batch.core.scope.context.StepContextRepeatCallback.doInIteration(StepContextRepeatCallback.java:82)\n\tat org.springframework.batch.repeat.support.RepeatTemplate.getNextResult(RepeatTemplate.java:369)\n\tat org.springframework.batch.repeat.support.RepeatTemplate.executeInternal(RepeatTemplate.java:206)\n\tat org.springframework.batch.repeat.support.RepeatTemplate.iterate(RepeatTemplate.java:140)\n\tat org.springframework.batch.core.step.tasklet.TaskletStep.doExecute(TaskletStep.java:235)\n\tat org.springframework.batch.core.step.AbstractStep.execute(AbstractStep.java:230)\n\tat org.springframework.batch.core.partition.support.TaskExecutorPartitionHandler.lambda$createTask$0(TaskExecutorPartitionHandler.java:132)\n\tat java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)\n\tat java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)\n\tat java.base/java.lang.Thread.run(Thread.java:840)\nCaused by: org.springframework.dao.DuplicateKeyExc	2026-10-09 08:13:29.330393
+172	8	statementWorkerStep:partition0	64	2026-10-09 08:14:39.185286	2026-10-09 08:14:39.190002	2026-10-09 08:14:39.546057	COMPLETED	6	500	0	420	0	0	80	80	COMPLETED		2026-10-09 08:14:39.547138
+173	8	statementWorkerStep:partition1	64	2026-10-09 08:14:39.184181	2026-10-09 08:14:39.190034	2026-10-09 08:14:39.565131	COMPLETED	6	500	0	416	0	0	84	84	COMPLETED		2026-10-09 08:14:39.565634
+171	2	statementPartitionStep	64	2026-10-09 08:14:39.17467	2026-10-09 08:14:39.177843	2026-10-09 08:14:39.566324	COMPLETED	12	1000	0	836	0	0	164	164	COMPLETED		2026-10-09 08:14:39.566812
+174	3	annualSummaryStep	64	2026-10-09 08:14:39.568749	2026-10-09 08:14:39.569612	2026-10-09 08:14:39.57523	COMPLETED	1	0	0	0	0	0	0	0	COMPLETED		2026-10-09 08:14:39.576068
 \.
 
 
@@ -813,7 +906,10 @@ COPY public.batch_step_execution_context (step_execution_id, short_context, seri
 96	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAAB3QAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAABHQAA2VuZHEAfgAFdAANYmF0Y2gudmVyc2lvbnQABTUuMi40dAAkdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnQubWF4cQB+AAV0AA5iYXRjaC5zdGVwVHlwZXQAN29yZy5zcHJpbmdmcmFtZXdvcmsuYmF0Y2guY29yZS5zdGVwLnRhc2tsZXQuVGFza2xldFN0ZXB4	\N
 94	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAABHQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAAAHQAA2VuZHEAfgAFdAANYmF0Y2gudmVyc2lvbnQABTUuMi40dAAkdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnQubWF4cQB+AAV0AA5iYXRjaC5zdGVwVHlwZXQAN29yZy5zcHJpbmdmcmFtZXdvcmsuYmF0Y2guY29yZS5zdGVwLnRhc2tsZXQuVGFza2xldFN0ZXB4	\N
 97	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAARYmF0Y2gudGFza2xldFR5cGV0AF9jb20uZXhhbXBsZS5iYW5rbGVnYWN5bWlncmF0aW9uLnRyYW5zYWN0aW9uLlRyYW5zYWN0aW9uSm9iQ29uZmlnJCRMYW1iZGEkNjA0LzB4MDAwMDAwZjAwMTJkNDk0MHQADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA3b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAudGFza2xldC5UYXNrbGV0U3RlcHg=	\N
+155	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAB9HQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAAAHQAA2VuZHNxAH4AAwAAAfR0AA1iYXRjaC52ZXJzaW9udAAFNS4yLjR0ACR0cmFuc2FjdGlvbkl0ZW1SZWFkZXIucmVhZC5jb3VudC5tYXhzcQB+AAMAAAH0dAAOYmF0Y2guc3RlcFR5cGV0ADdvcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC50YXNrbGV0LlRhc2tsZXRTdGVweA==	\N
 93	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAAlU2ltcGxlU3RlcEV4ZWN1dGlvblNwbGl0dGVyLkdSSURfU0laRXNyAA5qYXZhLmxhbmcuTG9uZzuL5JDMjyPfAgABSgAFdmFsdWV4cgAQamF2YS5sYW5nLk51bWJlcoaslR0LlOCLAgAAeHAAAAAAAAAAA3QADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA+b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnBhcnRpdGlvbi5zdXBwb3J0LlBhcnRpdGlvblN0ZXB4	\N
+156	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAARYmF0Y2gudGFza2xldFR5cGV0AF9jb20uZXhhbXBsZS5iYW5rbGVnYWN5bWlncmF0aW9uLnRyYW5zYWN0aW9uLlRyYW5zYWN0aW9uSm9iQ29uZmlnJCRMYW1iZGEkNjA0LzB4MDAwMDAwNzAwMTJkNDk0MHQADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA3b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAudGFza2xldC5UYXNrbGV0U3RlcHg=	\N
+153	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAAlU2ltcGxlU3RlcEV4ZWN1dGlvblNwbGl0dGVyLkdSSURfU0laRXNyAA5qYXZhLmxhbmcuTG9uZzuL5JDMjyPfAgABSgAFdmFsdWV4cgAQamF2YS5sYW5nLk51bWJlcoaslR0LlOCLAgAAeHAAAAAAAAAAAnQADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA+b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnBhcnRpdGlvbi5zdXBwb3J0LlBhcnRpdGlvblN0ZXB4	\N
 99	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAAB3QAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAABHQAA2VuZHEAfgAFdAANYmF0Y2gudmVyc2lvbnQABTUuMi40dAAkdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnQubWF4cQB+AAV0AA5iYXRjaC5zdGVwVHlwZXQAN29yZy5zcHJpbmdmcmFtZXdvcmsuYmF0Y2guY29yZS5zdGVwLnRhc2tsZXQuVGFza2xldFN0ZXB4	\N
 101	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAACnQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAAB3QAA2VuZHEAfgAFdAANYmF0Y2gudmVyc2lvbnQABTUuMi40dAAkdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnQubWF4cQB+AAV0AA5iYXRjaC5zdGVwVHlwZXQAN29yZy5zcHJpbmdmcmFtZXdvcmsuYmF0Y2guY29yZS5zdGVwLnRhc2tsZXQuVGFza2xldFN0ZXB4	\N
 100	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAABHQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAAAHQAA2VuZHEAfgAFdAANYmF0Y2gudmVyc2lvbnQABTUuMi40dAAkdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnQubWF4cQB+AAV0AA5iYXRjaC5zdGVwVHlwZXQAN29yZy5zcHJpbmdmcmFtZXdvcmsuYmF0Y2guY29yZS5zdGVwLnRhc2tsZXQuVGFza2xldFN0ZXB4	\N
@@ -826,6 +922,7 @@ COPY public.batch_step_execution_context (step_execution_id, short_context, seri
 110	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAABXQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAAAHQAA2VuZHEAfgAFdAANYmF0Y2gudmVyc2lvbnQABTUuMi40dAAkdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnQubWF4cQB+AAV0AA5iYXRjaC5zdGVwVHlwZXQAN29yZy5zcHJpbmdmcmFtZXdvcmsuYmF0Y2guY29yZS5zdGVwLnRhc2tsZXQuVGFza2xldFN0ZXB4	\N
 108	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAAlU2ltcGxlU3RlcEV4ZWN1dGlvblNwbGl0dGVyLkdSSURfU0laRXNyAA5qYXZhLmxhbmcuTG9uZzuL5JDMjyPfAgABSgAFdmFsdWV4cgAQamF2YS5sYW5nLk51bWJlcoaslR0LlOCLAgAAeHAAAAAAAAAAAnQADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA+b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnBhcnRpdGlvbi5zdXBwb3J0LlBhcnRpdGlvblN0ZXB4	\N
 111	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAARYmF0Y2gudGFza2xldFR5cGV0AF9jb20uZXhhbXBsZS5iYW5rbGVnYWN5bWlncmF0aW9uLnRyYW5zYWN0aW9uLlRyYW5zYWN0aW9uSm9iQ29uZmlnJCRMYW1iZGEkNjA0LzB4MDAwMDAwOTAwMTJkNDk0MHQADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA3b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAudGFza2xldC5UYXNrbGV0U3RlcHg=	\N
+163	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAD6HQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAB9HQAA2VuZHNxAH4AAwAAA+h0AA1iYXRjaC52ZXJzaW9udAAFNS4yLjR0ACR0cmFuc2FjdGlvbkl0ZW1SZWFkZXIucmVhZC5jb3VudC5tYXhzcQB+AAMAAAPodAAOYmF0Y2guc3RlcFR5cGV0ADdvcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC50YXNrbGV0LlRhc2tsZXRTdGVweA==	\N
 114	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAARYmF0Y2gudGFza2xldFR5cGV0AF9jb20uZXhhbXBsZS5iYW5rbGVnYWN5bWlncmF0aW9uLnRyYW5zYWN0aW9uLlRyYW5zYWN0aW9uSm9iQ29uZmlnJCRMYW1iZGEkNjA0LzB4MDAwMDAwNzAwMTJkNDk0MHQADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA3b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAudGFza2xldC5UYXNrbGV0U3RlcHg=	\N
 109	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAACnQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAABXQAA2VuZHEAfgAFdAANYmF0Y2gudmVyc2lvbnQABTUuMi40dAAkdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnQubWF4cQB+AAV0AA5iYXRjaC5zdGVwVHlwZXQAN29yZy5zcHJpbmdmcmFtZXdvcmsuYmF0Y2guY29yZS5zdGVwLnRhc2tsZXQuVGFza2xldFN0ZXB4	\N
 119	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAACnQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAABXQAA2VuZHEAfgAFdAANYmF0Y2gudmVyc2lvbnQABTUuMi40dAAkdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnQubWF4cQB+AAV0AA5iYXRjaC5zdGVwVHlwZXQAN29yZy5zcHJpbmdmcmFtZXdvcmsuYmF0Y2guY29yZS5zdGVwLnRhc2tsZXQuVGFza2xldFN0ZXB4	\N
@@ -838,6 +935,7 @@ COPY public.batch_step_execution_context (step_execution_id, short_context, seri
 115	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAAlU2ltcGxlU3RlcEV4ZWN1dGlvblNwbGl0dGVyLkdSSURfU0laRXNyAA5qYXZhLmxhbmcuTG9uZzuL5JDMjyPfAgABSgAFdmFsdWV4cgAQamF2YS5sYW5nLk51bWJlcoaslR0LlOCLAgAAeHAAAAAAAAAAAXQADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA+b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnBhcnRpdGlvbi5zdXBwb3J0LlBhcnRpdGlvblN0ZXB4	\N
 120	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAABXQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAAAHQAA2VuZHEAfgAFdAANYmF0Y2gudmVyc2lvbnQABTUuMi40dAAkdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnQubWF4cQB+AAV0AA5iYXRjaC5zdGVwVHlwZXQAN29yZy5zcHJpbmdmcmFtZXdvcmsuYmF0Y2guY29yZS5zdGVwLnRhc2tsZXQuVGFza2xldFN0ZXB4	\N
 122	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAAlU2ltcGxlU3RlcEV4ZWN1dGlvblNwbGl0dGVyLkdSSURfU0laRXNyAA5qYXZhLmxhbmcuTG9uZzuL5JDMjyPfAgABSgAFdmFsdWV4cgAQamF2YS5sYW5nLk51bWJlcoaslR0LlOCLAgAAeHAAAAAAAAAAA3QADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA+b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnBhcnRpdGlvbi5zdXBwb3J0LlBhcnRpdGlvblN0ZXB4	\N
+164	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAARYmF0Y2gudGFza2xldFR5cGV0AF9jb20uZXhhbXBsZS5iYW5rbGVnYWN5bWlncmF0aW9uLnRyYW5zYWN0aW9uLlRyYW5zYWN0aW9uSm9iQ29uZmlnJCRMYW1iZGEkNjA0LzB4MDAwMDAwYjgwMTJkNDk0MHQADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA3b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAudGFza2xldC5UYXNrbGV0U3RlcHg=	\N
 124	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAACnQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAAB3QAA2VuZHEAfgAFdAANYmF0Y2gudmVyc2lvbnQABTUuMi40dAAkdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnQubWF4cQB+AAV0AA5iYXRjaC5zdGVwVHlwZXQAN29yZy5zcHJpbmdmcmFtZXdvcmsuYmF0Y2guY29yZS5zdGVwLnRhc2tsZXQuVGFza2xldFN0ZXB4	\N
 125	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAAB3QAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAABHQAA2VuZHEAfgAFdAANYmF0Y2gudmVyc2lvbnQABTUuMi40dAAkdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnQubWF4cQB+AAV0AA5iYXRjaC5zdGVwVHlwZXQAN29yZy5zcHJpbmdmcmFtZXdvcmsuYmF0Y2guY29yZS5zdGVwLnRhc2tsZXQuVGFza2xldFN0ZXB4	\N
 123	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAABHQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAAAHQAA2VuZHEAfgAFdAANYmF0Y2gudmVyc2lvbnQABTUuMi40dAAkdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnQubWF4cQB+AAV0AA5iYXRjaC5zdGVwVHlwZXQAN29yZy5zcHJpbmdmcmFtZXdvcmsuYmF0Y2guY29yZS5zdGVwLnRhc2tsZXQuVGFza2xldFN0ZXB4	\N
@@ -865,6 +963,24 @@ COPY public.batch_step_execution_context (step_execution_id, short_context, seri
 147	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAARYmF0Y2gudGFza2xldFR5cGV0AF9jb20uZXhhbXBsZS5iYW5rbGVnYWN5bWlncmF0aW9uLnRyYW5zYWN0aW9uLlRyYW5zYWN0aW9uSm9iQ29uZmlnJCRMYW1iZGEkNjA0LzB4MDAwMDAwNzAwMTJkM2NkOHQADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA3b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAudGFza2xldC5UYXNrbGV0U3RlcHg=	\N
 145	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAABXQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAAAHQAA2VuZHEAfgAFdAANYmF0Y2gudmVyc2lvbnQABTUuMi40dAAkdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnQubWF4cQB+AAV0AA5iYXRjaC5zdGVwVHlwZXQAN29yZy5zcHJpbmdmcmFtZXdvcmsuYmF0Y2guY29yZS5zdGVwLnRhc2tsZXQuVGFza2xldFN0ZXB4	\N
 149	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAADHQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAABnQAA2VuZHEAfgAFdAANYmF0Y2gudmVyc2lvbnQABTUuMi40dAAkdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnQubWF4cQB+AAV0AA5iYXRjaC5zdGVwVHlwZXQAN29yZy5zcHJpbmdmcmFtZXdvcmsuYmF0Y2guY29yZS5zdGVwLnRhc2tsZXQuVGFza2xldFN0ZXB4	\N
+152	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAAlU2ltcGxlU3RlcEV4ZWN1dGlvblNwbGl0dGVyLkdSSURfU0laRXNyAA5qYXZhLmxhbmcuTG9uZzuL5JDMjyPfAgABSgAFdmFsdWV4cgAQamF2YS5sYW5nLk51bWJlcoaslR0LlOCLAgAAeHAAAAAAAAAAAnQADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA+b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnBhcnRpdGlvbi5zdXBwb3J0LlBhcnRpdGlvblN0ZXB4	\N
+158	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAD6HQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAB9HQAA2VuZHNxAH4AAwAAA+h0AA1iYXRjaC52ZXJzaW9udAAFNS4yLjR0ACR0cmFuc2FjdGlvbkl0ZW1SZWFkZXIucmVhZC5jb3VudC5tYXhzcQB+AAMAAAPodAAOYmF0Y2guc3RlcFR5cGV0ADdvcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC50YXNrbGV0LlRhc2tsZXRTdGVweA==	\N
+167	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAdaW50ZXJlc3RJdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAD6HQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAB9HQAA2VuZHNxAH4AAwAAA+h0AA1iYXRjaC52ZXJzaW9udAAFNS4yLjR0ACFpbnRlcmVzdEl0ZW1SZWFkZXIucmVhZC5jb3VudC5tYXhzcQB+AAMAAAPodAAOYmF0Y2guc3RlcFR5cGV0ADdvcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC50YXNrbGV0LlRhc2tsZXRTdGVweA==	\N
+162	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAB9HQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAAAHQAA2VuZHNxAH4AAwAAAfR0AA1iYXRjaC52ZXJzaW9udAAFNS4yLjR0ACR0cmFuc2FjdGlvbkl0ZW1SZWFkZXIucmVhZC5jb3VudC5tYXhzcQB+AAMAAAH0dAAOYmF0Y2guc3RlcFR5cGV0ADdvcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC50YXNrbGV0LlRhc2tsZXRTdGVweA==	\N
+159	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAB9HQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAAAHQAA2VuZHNxAH4AAwAAAfR0AA1iYXRjaC52ZXJzaW9udAAFNS4yLjR0ACR0cmFuc2FjdGlvbkl0ZW1SZWFkZXIucmVhZC5jb3VudC5tYXhzcQB+AAMAAAH0dAAOYmF0Y2guc3RlcFR5cGV0ADdvcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC50YXNrbGV0LlRhc2tsZXRTdGVweA==	\N
+154	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAgdHJhbnNhY3Rpb25JdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAD6HQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAB9HQAA2VuZHNxAH4AAwAAA+h0AA1iYXRjaC52ZXJzaW9udAAFNS4yLjR0ACR0cmFuc2FjdGlvbkl0ZW1SZWFkZXIucmVhZC5jb3VudC5tYXhzcQB+AAMAAAPodAAOYmF0Y2guc3RlcFR5cGV0ADdvcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC50YXNrbGV0LlRhc2tsZXRTdGVweA==	\N
+161	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAAlU2ltcGxlU3RlcEV4ZWN1dGlvblNwbGl0dGVyLkdSSURfU0laRXNyAA5qYXZhLmxhbmcuTG9uZzuL5JDMjyPfAgABSgAFdmFsdWV4cgAQamF2YS5sYW5nLk51bWJlcoaslR0LlOCLAgAAeHAAAAAAAAAAAnQADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA+b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnBhcnRpdGlvbi5zdXBwb3J0LlBhcnRpdGlvblN0ZXB4	\N
+157	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAAlU2ltcGxlU3RlcEV4ZWN1dGlvblNwbGl0dGVyLkdSSURfU0laRXNyAA5qYXZhLmxhbmcuTG9uZzuL5JDMjyPfAgABSgAFdmFsdWV4cgAQamF2YS5sYW5nLk51bWJlcoaslR0LlOCLAgAAeHAAAAAAAAAAAnQADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA+b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnBhcnRpdGlvbi5zdXBwb3J0LlBhcnRpdGlvblN0ZXB4	\N
+168	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAAlU2ltcGxlU3RlcEV4ZWN1dGlvblNwbGl0dGVyLkdSSURfU0laRXNyAA5qYXZhLmxhbmcuTG9uZzuL5JDMjyPfAgABSgAFdmFsdWV4cgAQamF2YS5sYW5nLk51bWJlcoaslR0LlOCLAgAAeHAAAAAAAAAAAnQADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA+b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnBhcnRpdGlvbi5zdXBwb3J0LlBhcnRpdGlvblN0ZXB4	\N
+160	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAARYmF0Y2gudGFza2xldFR5cGV0AF9jb20uZXhhbXBsZS5iYW5rbGVnYWN5bWlncmF0aW9uLnRyYW5zYWN0aW9uLlRyYW5zYWN0aW9uSm9iQ29uZmlnJCRMYW1iZGEkNjA0LzB4MDAwMDAwNzAwMTJkNDk0MHQADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA3b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAudGFza2xldC5UYXNrbGV0U3RlcHg=	\N
+165	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAAlU2ltcGxlU3RlcEV4ZWN1dGlvblNwbGl0dGVyLkdSSURfU0laRXNyAA5qYXZhLmxhbmcuTG9uZzuL5JDMjyPfAgABSgAFdmFsdWV4cgAQamF2YS5sYW5nLk51bWJlcoaslR0LlOCLAgAAeHAAAAAAAAAAAnQADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA+b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnBhcnRpdGlvbi5zdXBwb3J0LlBhcnRpdGlvblN0ZXB4	\N
+166	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAAdaW50ZXJlc3RJdGVtUmVhZGVyLnJlYWQuY291bnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAB9HQAEWJhdGNoLnRhc2tsZXRUeXBldAA9b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnN0ZXAuaXRlbS5DaHVua09yaWVudGVkVGFza2xldHQABXN0YXJ0c3EAfgADAAAAAHQAA2VuZHNxAH4AAwAAAfR0AA1iYXRjaC52ZXJzaW9udAAFNS4yLjR0ACFpbnRlcmVzdEl0ZW1SZWFkZXIucmVhZC5jb3VudC5tYXhzcQB+AAMAAAH0dAAOYmF0Y2guc3RlcFR5cGV0ADdvcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC50YXNrbGV0LlRhc2tsZXRTdGVweA==	\N
+169	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAARYmF0Y2gudGFza2xldFR5cGV0AD1vcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC5pdGVtLkNodW5rT3JpZW50ZWRUYXNrbGV0dAAFc3RhcnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAB9HQAA2VuZHNxAH4ABQAAA+h0AA1iYXRjaC52ZXJzaW9udAAFNS4yLjR0AB5zdGF0ZW1lbnRJdGVtUmVhZGVyLnJlYWQuY291bnRzcQB+AAUAAAH0dAAOYmF0Y2guc3RlcFR5cGV0ADdvcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC50YXNrbGV0LlRhc2tsZXRTdGVwdAAic3RhdGVtZW50SXRlbVJlYWRlci5yZWFkLmNvdW50Lm1heHNxAH4ABQAAA+h4	\N
+172	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAARYmF0Y2gudGFza2xldFR5cGV0AD1vcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC5pdGVtLkNodW5rT3JpZW50ZWRUYXNrbGV0dAAFc3RhcnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAAAHQAA2VuZHNxAH4ABQAAAfR0AA1iYXRjaC52ZXJzaW9udAAFNS4yLjR0AB5zdGF0ZW1lbnRJdGVtUmVhZGVyLnJlYWQuY291bnRzcQB+AAUAAAH0dAAOYmF0Y2guc3RlcFR5cGV0ADdvcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC50YXNrbGV0LlRhc2tsZXRTdGVwdAAic3RhdGVtZW50SXRlbVJlYWRlci5yZWFkLmNvdW50Lm1heHNxAH4ABQAAAfR4	\N
+170	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAARYmF0Y2gudGFza2xldFR5cGV0AD1vcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC5pdGVtLkNodW5rT3JpZW50ZWRUYXNrbGV0dAAFc3RhcnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAAAHQAA2VuZHNxAH4ABQAAAfR0AA1iYXRjaC52ZXJzaW9udAAFNS4yLjR0AB5zdGF0ZW1lbnRJdGVtUmVhZGVyLnJlYWQuY291bnRzcQB+AAUAAAEsdAAOYmF0Y2guc3RlcFR5cGV0ADdvcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC50YXNrbGV0LlRhc2tsZXRTdGVwdAAic3RhdGVtZW50SXRlbVJlYWRlci5yZWFkLmNvdW50Lm1heHNxAH4ABQAAAfR4	\N
+173	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAAHdAARYmF0Y2gudGFza2xldFR5cGV0AD1vcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC5pdGVtLkNodW5rT3JpZW50ZWRUYXNrbGV0dAAFc3RhcnRzcgARamF2YS5sYW5nLkludGVnZXIS4qCk94GHOAIAAUkABXZhbHVleHIAEGphdmEubGFuZy5OdW1iZXKGrJUdC5TgiwIAAHhwAAAB9HQAA2VuZHNxAH4ABQAAA+h0AA1iYXRjaC52ZXJzaW9udAAFNS4yLjR0AB5zdGF0ZW1lbnRJdGVtUmVhZGVyLnJlYWQuY291bnRzcQB+AAUAAAPodAAOYmF0Y2guc3RlcFR5cGV0ADdvcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC50YXNrbGV0LlRhc2tsZXRTdGVwdAAic3RhdGVtZW50SXRlbVJlYWRlci5yZWFkLmNvdW50Lm1heHNxAH4ABQAAA+h4	\N
+171	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAAlU2ltcGxlU3RlcEV4ZWN1dGlvblNwbGl0dGVyLkdSSURfU0laRXNyAA5qYXZhLmxhbmcuTG9uZzuL5JDMjyPfAgABSgAFdmFsdWV4cgAQamF2YS5sYW5nLk51bWJlcoaslR0LlOCLAgAAeHAAAAAAAAAAAnQADWJhdGNoLnZlcnNpb250AAU1LjIuNHQADmJhdGNoLnN0ZXBUeXBldAA+b3JnLnNwcmluZ2ZyYW1ld29yay5iYXRjaC5jb3JlLnBhcnRpdGlvbi5zdXBwb3J0LlBhcnRpdGlvblN0ZXB4	\N
+174	rO0ABXNyABFqYXZhLnV0aWwuSGFzaE1hcAUH2sHDFmDRAwACRgAKbG9hZEZhY3RvckkACXRocmVzaG9sZHhwP0AAAAAAAAx3CAAAABAAAAADdAARYmF0Y2gudGFza2xldFR5cGV0AFtjb20uZXhhbXBsZS5iYW5rbGVnYWN5bWlncmF0aW9uLnN0YXRlbWVudC5TdGF0ZW1lbnRKb2JDb25maWckJExhbWJkYSQ2MDMvMHgwMDAwMDBjODAxMmQ0M2UwdAANYmF0Y2gudmVyc2lvbnQABTUuMi40dAAOYmF0Y2guc3RlcFR5cGV0ADdvcmcuc3ByaW5nZnJhbWV3b3JrLmJhdGNoLmNvcmUuc3RlcC50YXNrbGV0LlRhc2tsZXRTdGVweA==	\N
 \.
 
 
@@ -873,15 +989,825 @@ COPY public.batch_step_execution_context (step_execution_id, short_context, seri
 --
 
 COPY public.estados_cuenta (cuenta_id, fecha, transaccion, monto, descripcion, movimiento, anomalia, motivo) FROM stdin;
-101	2024-01-01	deposito	1000.00	Ingreso mensual	INGRESO	f	\N
-101	2024-03-15	retiro	-500.00	Retiro parcial	EGRESO	f	\N
-102	2024-05-22	deposito	1500.00	Ingreso mensual	INGRESO	f	\N
-103	2024-07-10	deposito	2000.00	Ingreso mensual	INGRESO	f	\N
-104	2024-09-05	compra	-100.00	Compra en tienda	EGRESO	f	\N
-105	2024-10-01	deposito	2500.00	Ingreso extra	INGRESO	f	\N
-106	2024-11-20	deposito	3000.00	Ingreso mensual	INGRESO	f	\N
-107	2024-12-25	deposito	0.00	Ingreso navideño	SIN_MOVIMIENTO	t	Monto igual a cero
-108	2024-12-31	deposito	2000.00	Ingreso de fin de año	INGRESO	f	\N
+117	2024-02-07	retiro	-1000.00	Ingreso de fin de año	EGRESO	f	\N
+105	2024-12-28	retiro	-2500.00	Ingreso de fin de año	EGRESO	f	\N
+104	2024-02-20	pago	-3000.00	Compra en tienda	EGRESO	f	\N
+117	2024-01-09	retiro	-1000.00	Compra en tienda	EGRESO	f	\N
+116	2024-03-18	compra	-100.00	Retiro parcial	EGRESO	f	\N
+107	2024-04-20	retiro	-100.00	Sin descripción	EGRESO	f	\N
+102	2024-05-08	compra	-500.00	Retiro parcial	EGRESO	f	\N
+102	2024-11-30	compra	-500.00	Retiro parcial	EGRESO	f	\N
+105	2024-09-07	deposito	500.00	Compra en tienda	INGRESO	f	\N
+119	2024-03-08	compra	-1500.00	Compra en tienda	EGRESO	f	\N
+104	2024-03-22	compra	-1500.00	Compra en tienda	EGRESO	f	\N
+120	2024-02-02	retiro	-1000.00	Retiro parcial	EGRESO	f	\N
+106	2024-11-25	compra	-1000.00	Retiro parcial	EGRESO	f	\N
+113	2024-12-03	deposito	3000.00	Retiro parcial	INGRESO	f	\N
+101	2024-12-19	compra	-1500.00	Retiro parcial	EGRESO	f	\N
+101	2024-04-30	compra	-2500.00	Ingreso navideño	EGRESO	f	\N
+111	2024-02-21	retiro	-1000.00	Retiro parcial	EGRESO	f	\N
+103	2024-05-09	retiro	-1000.00	Ingreso de fin de año	EGRESO	f	\N
+103	2024-10-14	deposito	100.00	Ingreso mensual	INGRESO	f	\N
+110	2024-01-02	compra	-1500.00	Retiro parcial	EGRESO	f	\N
+111	2024-09-26	compra	-1000.00	Ingreso mensual	EGRESO	f	\N
+107	2024-08-23	retiro	-3000.00	Sin descripción	EGRESO	f	\N
+111	2024-09-22	deposito	1500.00	Ingreso extra	INGRESO	f	\N
+105	2024-03-26	pago	-500.00	Sin descripción	EGRESO	f	\N
+101	2024-05-18	retiro	-2000.00	Sin descripción	EGRESO	f	\N
+113	2024-07-27	retiro	-100.00	Ingreso mensual	EGRESO	f	\N
+104	2024-05-22	compra	-1500.00	Sin descripción	EGRESO	f	\N
+110	2024-07-17	deposito	3000.00	Ingreso extra	INGRESO	f	\N
+104	2024-03-11	compra	-3000.00	Ingreso extra	EGRESO	f	\N
+105	2024-11-02	compra	-2000.00	Ingreso mensual	EGRESO	f	\N
+107	2024-12-04	retiro	-3000.00	Retiro parcial	EGRESO	f	\N
+112	2024-07-14	retiro	-2000.00	Retiro parcial	EGRESO	f	\N
+117	2024-05-22	retiro	-1500.00	Compra en tienda	EGRESO	f	\N
+118	2024-02-22	deposito	2500.00	Ingreso navideño	INGRESO	f	\N
+113	2024-12-24	compra	-100.00	Ingreso navideño	EGRESO	f	\N
+107	2024-12-10	retiro	-100.00	Ingreso extra	EGRESO	f	\N
+120	2024-02-28	deposito	3000.00	Ingreso mensual	INGRESO	f	\N
+113	2024-10-22	compra	-1000.00	Retiro parcial	EGRESO	f	\N
+120	2024-05-25	compra	-3000.00	Ingreso mensual	EGRESO	f	\N
+110	2024-04-22	retiro	-1500.00	Ingreso mensual	EGRESO	f	\N
+110	2024-04-26	compra	-2500.00	Ingreso mensual	EGRESO	f	\N
+116	2024-05-13	deposito	1000.00	Ingreso de fin de año	INGRESO	f	\N
+103	2024-11-04	retiro	-500.00	Ingreso extra	EGRESO	f	\N
+120	2024-04-25	deposito	1000.00	Ingreso mensual	INGRESO	f	\N
+118	2024-04-13	deposito	1000.00	Ingreso extra	INGRESO	f	\N
+119	2024-06-18	retiro	-100.00	Ingreso mensual	EGRESO	f	\N
+116	2024-10-16	compra	-3000.00	Sin descripción	EGRESO	f	\N
+109	2024-04-19	pago	-2500.00	Ingreso navideño	EGRESO	f	\N
+101	2024-02-25	compra	-3000.00	Retiro parcial	EGRESO	f	\N
+119	2024-02-19	pago	-3000.00	Retiro parcial	EGRESO	f	\N
+104	2024-09-02	retiro	-2500.00	Ingreso extra	EGRESO	f	\N
+101	2024-11-05	compra	-2000.00	Sin descripción	EGRESO	f	\N
+110	2024-06-13	deposito	1500.00	Compra en tienda	INGRESO	f	\N
+119	2024-06-08	retiro	-2000.00	Retiro parcial	EGRESO	f	\N
+103	2024-09-28	retiro	-500.00	Ingreso mensual	EGRESO	f	\N
+115	2024-03-28	retiro	-2000.00	Compra en tienda	EGRESO	f	\N
+102	2024-12-20	deposito	1500.00	Ingreso mensual	INGRESO	f	\N
+110	2024-11-09	retiro	-2000.00	Ingreso navideño	EGRESO	f	\N
+101	2024-02-12	retiro	-2500.00	Retiro parcial	EGRESO	f	\N
+115	2024-02-25	deposito	2000.00	Compra en tienda	INGRESO	f	\N
+110	2024-04-10	compra	-2000.00	Compra en tienda	EGRESO	f	\N
+102	2024-03-10	compra	-2500.00	Retiro parcial	EGRESO	f	\N
+101	2024-03-15	retiro	-3000.00	Ingreso extra	EGRESO	f	\N
+103	2024-10-22	compra	-1000.00	Ingreso mensual	EGRESO	f	\N
+111	2024-08-25	retiro	-1500.00	Compra en tienda	EGRESO	f	\N
+109	2024-05-11	retiro	-1500.00	Ingreso de fin de año	EGRESO	f	\N
+115	2024-09-30	retiro	-2500.00	Ingreso extra	EGRESO	f	\N
+108	2024-09-07	compra	-100.00	Sin descripción	EGRESO	f	\N
+110	2024-12-01	compra	-100.00	Ingreso de fin de año	EGRESO	f	\N
+118	2024-03-03	retiro	-1000.00	Retiro parcial	EGRESO	f	\N
+112	2024-03-26	retiro	-1000.00	Compra en tienda	EGRESO	f	\N
+120	2024-09-11	deposito	1000.00	Compra en tienda	INGRESO	f	\N
+111	2024-08-12	retiro	-3000.00	Ingreso de fin de año	EGRESO	f	\N
+120	2024-09-21	compra	-3000.00	Compra en tienda	EGRESO	f	\N
+115	2024-12-25	compra	-1000.00	Retiro parcial	EGRESO	f	\N
+107	2024-10-18	deposito	500.00	Compra en tienda	INGRESO	f	\N
+114	2024-06-12	retiro	-100.00	Retiro parcial	EGRESO	f	\N
+109	2024-12-28	deposito	2500.00	Ingreso extra	INGRESO	f	\N
+116	2024-07-17	deposito	1000.00	Retiro parcial	INGRESO	f	\N
+113	2024-08-10	retiro	-1500.00	Compra en tienda	EGRESO	f	\N
+111	2024-10-26	deposito	2500.00	Ingreso de fin de año	INGRESO	f	\N
+108	2024-08-27	compra	-100.00	Ingreso navideño	EGRESO	f	\N
+109	2024-11-04	retiro	-500.00	Ingreso navideño	EGRESO	f	\N
+107	2024-06-10	deposito	100.00	Ingreso navideño	INGRESO	f	\N
+101	2024-02-15	compra	-100.00	Ingreso de fin de año	EGRESO	f	\N
+110	2024-08-07	retiro	-1500.00	Ingreso extra	EGRESO	f	\N
+101	2024-05-12	deposito	1000.00	Sin descripción	INGRESO	f	\N
+116	2024-08-07	deposito	1000.00	Retiro parcial	INGRESO	f	\N
+105	2024-01-04	deposito	100.00	Compra en tienda	INGRESO	f	\N
+108	2024-05-04	retiro	-2500.00	Retiro parcial	EGRESO	f	\N
+107	2024-05-11	retiro	-2000.00	Retiro parcial	EGRESO	f	\N
+112	2024-04-29	deposito	2000.00	Retiro parcial	INGRESO	f	\N
+108	2024-02-10	deposito	1000.00	Ingreso navideño	INGRESO	f	\N
+103	2024-10-01	retiro	-1500.00	Retiro parcial	EGRESO	f	\N
+111	2024-01-30	compra	-500.00	Ingreso de fin de año	EGRESO	f	\N
+110	2024-03-30	deposito	1500.00	Ingreso de fin de año	INGRESO	f	\N
+107	2024-08-09	deposito	3000.00	Sin descripción	INGRESO	f	\N
+109	2024-10-31	deposito	3000.00	Retiro parcial	INGRESO	f	\N
+108	2024-07-08	retiro	-1500.00	Sin descripción	EGRESO	f	\N
+112	2024-10-03	compra	-3000.00	Compra en tienda	EGRESO	f	\N
+101	2024-05-09	retiro	-1500.00	Ingreso extra	EGRESO	f	\N
+114	2024-03-12	compra	-1500.00	Ingreso navideño	EGRESO	f	\N
+101	2024-02-07	compra	-2500.00	Sin descripción	EGRESO	f	\N
+110	2024-06-04	compra	-2500.00	Sin descripción	EGRESO	f	\N
+101	2024-06-28	pago	-2000.00	Sin descripción	EGRESO	f	\N
+106	2024-01-15	retiro	-2500.00	Compra en tienda	EGRESO	f	\N
+114	2024-02-23	retiro	-100.00	Sin descripción	EGRESO	f	\N
+118	2024-07-10	compra	-1000.00	Ingreso extra	EGRESO	f	\N
+103	2024-06-29	compra	-2000.00	Retiro parcial	EGRESO	f	\N
+112	2024-09-12	compra	-1000.00	Sin descripción	EGRESO	f	\N
+101	2024-04-28	deposito	1000.00	Ingreso de fin de año	INGRESO	f	\N
+118	2024-09-21	compra	-100.00	Ingreso de fin de año	EGRESO	f	\N
+106	2024-07-22	compra	-500.00	Ingreso navideño	EGRESO	f	\N
+115	2024-07-05	deposito	500.00	Compra en tienda	INGRESO	f	\N
+116	2024-04-11	retiro	-1500.00	Retiro parcial	EGRESO	f	\N
+120	2024-06-09	compra	-3000.00	Compra en tienda	EGRESO	f	\N
+101	2024-10-29	compra	-2500.00	Ingreso navideño	EGRESO	f	\N
+119	2024-04-20	deposito	100.00	Sin descripción	INGRESO	f	\N
+103	2024-05-13	deposito	3000.00	Retiro parcial	INGRESO	f	\N
+117	2024-03-15	deposito	1500.00	Compra en tienda	INGRESO	f	\N
+104	2024-08-07	retiro	-1500.00	Ingreso extra	EGRESO	f	\N
+112	2024-11-08	deposito	1000.00	Ingreso navideño	INGRESO	f	\N
+104	2024-02-10	compra	-100.00	Compra en tienda	EGRESO	f	\N
+101	2024-06-19	deposito	1500.00	Ingreso mensual	INGRESO	f	\N
+112	2024-06-21	deposito	3000.00	Sin descripción	INGRESO	f	\N
+119	2024-02-20	retiro	-1000.00	Sin descripción	EGRESO	f	\N
+117	2024-03-19	retiro	-500.00	Retiro parcial	EGRESO	f	\N
+104	2024-06-14	compra	-3000.00	Sin descripción	EGRESO	f	\N
+109	2024-11-23	compra	-1000.00	Ingreso extra	EGRESO	f	\N
+113	2024-05-12	compra	-100.00	Ingreso navideño	EGRESO	f	\N
+118	2024-02-08	compra	-1000.00	Ingreso navideño	EGRESO	f	\N
+119	2024-06-06	retiro	-1500.00	Ingreso mensual	EGRESO	f	\N
+109	2024-01-23	deposito	3000.00	Compra en tienda	INGRESO	f	\N
+107	2024-12-07	retiro	-3000.00	Ingreso extra	EGRESO	f	\N
+105	2024-10-02	retiro	-500.00	Ingreso mensual	EGRESO	f	\N
+105	2024-02-21	deposito	1000.00	Ingreso mensual	INGRESO	f	\N
+111	2024-04-02	deposito	500.00	Ingreso de fin de año	INGRESO	f	\N
+117	2024-08-26	pago	-500.00	Ingreso mensual	EGRESO	f	\N
+111	2024-02-07	pago	-1000.00	Retiro parcial	EGRESO	f	\N
+107	2024-11-10	deposito	2000.00	Sin descripción	INGRESO	f	\N
+101	2024-10-19	deposito	1000.00	Ingreso navideño	INGRESO	f	\N
+105	2024-10-17	retiro	-500.00	Sin descripción	EGRESO	f	\N
+104	2024-03-07	deposito	100.00	Ingreso de fin de año	INGRESO	f	\N
+106	2024-08-31	deposito	500.00	Sin descripción	INGRESO	f	\N
+112	2024-06-08	deposito	1500.00	Compra en tienda	INGRESO	f	\N
+106	2024-04-11	deposito	1000.00	Ingreso navideño	INGRESO	f	\N
+116	2024-08-23	retiro	-500.00	Retiro parcial	EGRESO	f	\N
+120	2024-09-07	deposito	2500.00	Ingreso navideño	INGRESO	f	\N
+110	2024-01-12	deposito	500.00	Ingreso de fin de año	INGRESO	f	\N
+109	2024-04-04	deposito	2000.00	Sin descripción	INGRESO	f	\N
+106	2024-09-30	deposito	1000.00	Compra en tienda	INGRESO	f	\N
+110	2024-02-10	compra	-500.00	Ingreso navideño	EGRESO	f	\N
+103	2024-05-27	retiro	-2500.00	Compra en tienda	EGRESO	f	\N
+112	2024-05-21	deposito	3000.00	Ingreso mensual	INGRESO	f	\N
+103	2024-08-25	deposito	1000.00	Sin descripción	INGRESO	f	\N
+108	2024-07-11	compra	-100.00	Ingreso mensual	EGRESO	f	\N
+114	2024-10-11	deposito	2500.00	Ingreso navideño	INGRESO	f	\N
+111	2024-08-21	deposito	2500.00	Ingreso mensual	INGRESO	f	\N
+112	2024-02-23	compra	-2000.00	Ingreso mensual	EGRESO	f	\N
+110	2024-06-30	pago	-2000.00	Retiro parcial	EGRESO	f	\N
+115	2024-09-25	retiro	-100.00	Ingreso mensual	EGRESO	f	\N
+104	2024-07-30	compra	-1000.00	Retiro parcial	EGRESO	f	\N
+109	2024-07-28	retiro	-2500.00	Retiro parcial	EGRESO	f	\N
+119	2024-03-07	deposito	3000.00	Ingreso mensual	INGRESO	f	\N
+118	2024-03-01	deposito	1500.00	Retiro parcial	INGRESO	f	\N
+120	2024-02-13	retiro	-2000.00	Sin descripción	EGRESO	f	\N
+111	2024-10-25	compra	-1000.00	Ingreso mensual	EGRESO	f	\N
+117	2024-10-16	deposito	1500.00	Ingreso extra	INGRESO	f	\N
+107	2024-03-03	compra	-1000.00	Compra en tienda	EGRESO	f	\N
+117	2024-09-14	compra	-500.00	Retiro parcial	EGRESO	f	\N
+118	2024-10-13	deposito	3000.00	Retiro parcial	INGRESO	f	\N
+105	2024-02-15	deposito	500.00	Retiro parcial	INGRESO	f	\N
+108	2024-10-05	compra	-1000.00	Retiro parcial	EGRESO	f	\N
+117	2024-08-29	retiro	-500.00	Compra en tienda	EGRESO	f	\N
+103	2024-07-07	deposito	2000.00	Retiro parcial	INGRESO	f	\N
+110	2024-09-18	compra	-2000.00	Ingreso de fin de año	EGRESO	f	\N
+112	2024-10-06	retiro	-100.00	Compra en tienda	EGRESO	f	\N
+110	2024-06-18	retiro	-2500.00	Ingreso de fin de año	EGRESO	f	\N
+114	2024-12-28	retiro	-2500.00	Ingreso navideño	EGRESO	f	\N
+107	2024-01-15	compra	-2500.00	Ingreso de fin de año	EGRESO	f	\N
+114	2024-03-02	compra	-2500.00	Ingreso navideño	EGRESO	f	\N
+111	2024-05-27	retiro	-100.00	Ingreso de fin de año	EGRESO	f	\N
+113	2024-06-28	compra	-100.00	Ingreso extra	EGRESO	f	\N
+103	2024-08-03	deposito	2000.00	Ingreso de fin de año	INGRESO	f	\N
+114	2024-09-21	deposito	1500.00	Retiro parcial	INGRESO	f	\N
+116	2024-12-20	compra	-3000.00	Ingreso mensual	EGRESO	f	\N
+110	2024-06-18	compra	-3000.00	Sin descripción	EGRESO	f	\N
+119	2024-01-26	deposito	500.00	Sin descripción	INGRESO	f	\N
+103	2024-01-27	pago	-500.00	Ingreso de fin de año	EGRESO	f	\N
+104	2024-02-01	pago	-1000.00	Sin descripción	EGRESO	f	\N
+108	2024-05-23	retiro	-1000.00	Retiro parcial	EGRESO	f	\N
+118	2024-12-17	retiro	-2500.00	Ingreso extra	EGRESO	f	\N
+118	2024-09-20	deposito	1000.00	Retiro parcial	INGRESO	f	\N
+119	2024-10-22	retiro	-3000.00	Ingreso extra	EGRESO	f	\N
+118	2024-10-18	compra	-500.00	Compra en tienda	EGRESO	f	\N
+117	2024-04-15	deposito	1500.00	Sin descripción	INGRESO	f	\N
+103	2024-07-09	compra	-1500.00	Ingreso navideño	EGRESO	f	\N
+103	2024-12-23	retiro	-2500.00	Compra en tienda	EGRESO	f	\N
+108	2024-11-28	deposito	100.00	Ingreso de fin de año	INGRESO	f	\N
+111	2024-07-31	deposito	500.00	Compra en tienda	INGRESO	f	\N
+117	2024-03-22	retiro	-2500.00	Ingreso mensual	EGRESO	f	\N
+102	2024-10-13	compra	-1000.00	Compra en tienda	EGRESO	f	\N
+113	2024-07-31	deposito	3000.00	Ingreso de fin de año	INGRESO	f	\N
+103	2024-04-10	retiro	-2000.00	Sin descripción	EGRESO	f	\N
+114	2024-05-19	retiro	-3000.00	Ingreso de fin de año	EGRESO	f	\N
+103	2024-07-29	retiro	-2500.00	Sin descripción	EGRESO	f	\N
+106	2024-03-05	retiro	-1000.00	Sin descripción	EGRESO	f	\N
+114	2024-08-30	compra	-3000.00	Ingreso extra	EGRESO	f	\N
+109	2024-04-15	compra	-2000.00	Sin descripción	EGRESO	f	\N
+101	2024-02-01	retiro	-1500.00	Sin descripción	EGRESO	f	\N
+117	2024-10-14	compra	-2000.00	Ingreso mensual	EGRESO	f	\N
+113	2024-06-30	deposito	3000.00	Ingreso mensual	INGRESO	f	\N
+114	2024-05-06	retiro	-100.00	Ingreso mensual	EGRESO	f	\N
+117	2024-06-06	compra	-500.00	Ingreso extra	EGRESO	f	\N
+110	2024-03-31	compra	-2500.00	Sin descripción	EGRESO	f	\N
+115	2024-08-12	deposito	1000.00	Compra en tienda	INGRESO	f	\N
+109	2024-02-25	compra	-1500.00	Ingreso de fin de año	EGRESO	f	\N
+104	2024-10-28	deposito	500.00	Ingreso de fin de año	INGRESO	f	\N
+102	2024-08-02	retiro	-500.00	Sin descripción	EGRESO	f	\N
+110	2024-02-04	deposito	1500.00	Compra en tienda	INGRESO	f	\N
+103	2024-07-05	deposito	1000.00	Ingreso mensual	INGRESO	f	\N
+116	2024-06-10	deposito	3000.00	Ingreso extra	INGRESO	f	\N
+101	2024-02-04	retiro	-2000.00	Ingreso mensual	EGRESO	f	\N
+115	2024-08-27	compra	-100.00	Ingreso mensual	EGRESO	f	\N
+105	2024-10-06	compra	-2000.00	Ingreso extra	EGRESO	f	\N
+102	2024-06-02	compra	-2000.00	Ingreso mensual	EGRESO	f	\N
+111	2024-01-16	retiro	-100.00	Ingreso de fin de año	EGRESO	f	\N
+102	2024-02-05	compra	-500.00	Sin descripción	EGRESO	f	\N
+111	2024-09-12	compra	-1500.00	Ingreso de fin de año	EGRESO	f	\N
+113	2024-01-09	compra	-2000.00	Ingreso navideño	EGRESO	f	\N
+120	2024-08-05	retiro	-100.00	Ingreso extra	EGRESO	f	\N
+104	2024-02-20	retiro	-2000.00	Ingreso extra	EGRESO	f	\N
+116	2024-11-28	compra	-2000.00	Ingreso extra	EGRESO	f	\N
+101	2024-09-09	deposito	100.00	Ingreso de fin de año	INGRESO	f	\N
+107	2024-11-21	deposito	2500.00	Ingreso de fin de año	INGRESO	f	\N
+112	2024-11-28	deposito	3000.00	Ingreso extra	INGRESO	f	\N
+106	2024-04-09	deposito	3000.00	Compra en tienda	INGRESO	f	\N
+104	2024-11-23	compra	-1500.00	Ingreso mensual	EGRESO	f	\N
+120	2024-08-28	deposito	2500.00	Ingreso mensual	INGRESO	f	\N
+112	2024-04-12	compra	-500.00	Compra en tienda	EGRESO	f	\N
+119	2024-04-20	retiro	-2000.00	Retiro parcial	EGRESO	f	\N
+109	2024-01-12	retiro	-1000.00	Retiro parcial	EGRESO	f	\N
+115	2024-11-15	deposito	100.00	Compra en tienda	INGRESO	f	\N
+112	2024-10-09	retiro	-3000.00	Ingreso extra	EGRESO	f	\N
+106	2024-05-25	compra	-100.00	Sin descripción	EGRESO	f	\N
+119	2024-01-27	deposito	2000.00	Ingreso navideño	INGRESO	f	\N
+118	2024-04-28	deposito	100.00	Compra en tienda	INGRESO	f	\N
+111	2024-12-22	compra	-2500.00	Ingreso extra	EGRESO	f	\N
+105	2024-01-28	deposito	2000.00	Ingreso navideño	INGRESO	f	\N
+106	2024-08-28	retiro	-1500.00	Ingreso extra	EGRESO	f	\N
+108	2024-01-12	deposito	2500.00	Compra en tienda	INGRESO	f	\N
+114	2024-10-26	deposito	100.00	Ingreso mensual	INGRESO	f	\N
+105	2024-04-06	pago	-100.00	Ingreso navideño	EGRESO	f	\N
+113	2024-05-29	deposito	1500.00	Sin descripción	INGRESO	f	\N
+101	2024-06-17	retiro	-1500.00	Ingreso navideño	EGRESO	f	\N
+115	2024-01-03	retiro	-100.00	Ingreso navideño	EGRESO	f	\N
+104	2024-04-06	retiro	-500.00	Ingreso navideño	EGRESO	f	\N
+104	2024-04-02	deposito	2500.00	Sin descripción	INGRESO	f	\N
+103	2024-03-02	compra	-1000.00	Retiro parcial	EGRESO	f	\N
+116	2024-07-08	deposito	1000.00	Retiro parcial	INGRESO	f	\N
+111	2024-04-14	compra	-1000.00	Ingreso extra	EGRESO	f	\N
+114	2024-11-12	retiro	-3000.00	Ingreso mensual	EGRESO	f	\N
+105	2024-05-16	compra	-3000.00	Ingreso navideño	EGRESO	f	\N
+110	2024-02-17	retiro	-500.00	Compra en tienda	EGRESO	f	\N
+102	2024-03-28	compra	-2000.00	Ingreso navideño	EGRESO	f	\N
+105	2024-06-29	retiro	-500.00	Retiro parcial	EGRESO	f	\N
+104	2024-10-28	compra	-3000.00	Ingreso navideño	EGRESO	f	\N
+105	2024-01-15	retiro	-2500.00	Retiro parcial	EGRESO	f	\N
+118	2024-03-28	pago	-3000.00	Ingreso navideño	EGRESO	f	\N
+108	2024-02-06	deposito	3000.00	Compra en tienda	INGRESO	f	\N
+110	2024-09-15	deposito	1000.00	Retiro parcial	INGRESO	f	\N
+112	2024-01-24	deposito	1000.00	Compra en tienda	INGRESO	f	\N
+110	2024-07-24	retiro	-2500.00	Sin descripción	EGRESO	f	\N
+111	2024-12-23	deposito	2000.00	Ingreso mensual	INGRESO	f	\N
+119	2024-03-14	deposito	3000.00	Ingreso de fin de año	INGRESO	f	\N
+105	2024-12-16	compra	-2500.00	Ingreso de fin de año	EGRESO	f	\N
+110	2024-02-05	compra	-500.00	Ingreso extra	EGRESO	f	\N
+119	2024-04-03	compra	-3000.00	Compra en tienda	EGRESO	f	\N
+119	2024-11-04	deposito	1000.00	Ingreso extra	INGRESO	f	\N
+101	2024-06-11	retiro	-2500.00	Ingreso navideño	EGRESO	f	\N
+105	2024-07-21	deposito	500.00	Sin descripción	INGRESO	f	\N
+104	2024-08-17	deposito	1000.00	Ingreso extra	INGRESO	f	\N
+105	2024-02-23	deposito	100.00	Compra en tienda	INGRESO	f	\N
+105	2024-08-07	deposito	100.00	Sin descripción	INGRESO	f	\N
+113	2024-08-31	deposito	500.00	Ingreso mensual	INGRESO	f	\N
+103	2024-08-01	deposito	100.00	Ingreso navideño	INGRESO	f	\N
+118	2024-06-12	deposito	500.00	Sin descripción	INGRESO	f	\N
+113	2024-10-16	deposito	1000.00	Ingreso mensual	INGRESO	f	\N
+114	2024-12-17	deposito	2000.00	Retiro parcial	INGRESO	f	\N
+114	2024-12-25	retiro	-500.00	Retiro parcial	EGRESO	f	\N
+118	2024-07-15	deposito	1500.00	Retiro parcial	INGRESO	f	\N
+101	2024-06-30	compra	-1000.00	Ingreso navideño	EGRESO	f	\N
+117	2024-04-24	retiro	-1000.00	Ingreso mensual	EGRESO	f	\N
+107	2024-04-12	deposito	2500.00	Ingreso extra	INGRESO	f	\N
+120	2024-01-24	compra	-1500.00	Ingreso de fin de año	EGRESO	f	\N
+113	2024-04-01	deposito	2500.00	Ingreso de fin de año	INGRESO	f	\N
+101	2024-03-30	compra	-100.00	Ingreso extra	EGRESO	f	\N
+112	2024-11-11	deposito	100.00	Ingreso de fin de año	INGRESO	f	\N
+117	2024-12-11	deposito	2000.00	Ingreso navideño	INGRESO	f	\N
+118	2024-04-05	retiro	-1500.00	Ingreso extra	EGRESO	f	\N
+118	2024-04-18	compra	-500.00	Sin descripción	EGRESO	f	\N
+105	2024-08-30	deposito	3000.00	Ingreso navideño	INGRESO	f	\N
+106	2024-02-26	deposito	2000.00	Sin descripción	INGRESO	f	\N
+115	2024-11-07	deposito	1000.00	Retiro parcial	INGRESO	f	\N
+118	2024-08-28	deposito	2000.00	Ingreso extra	INGRESO	f	\N
+115	2024-10-29	pago	-2500.00	Retiro parcial	EGRESO	f	\N
+118	2024-08-13	pago	-2500.00	Compra en tienda	EGRESO	f	\N
+117	2024-01-30	deposito	3000.00	Ingreso navideño	INGRESO	f	\N
+107	2024-02-03	retiro	-2000.00	Ingreso extra	EGRESO	f	\N
+107	2024-01-11	compra	-2500.00	Retiro parcial	EGRESO	f	\N
+108	2024-08-25	deposito	100.00	Retiro parcial	INGRESO	f	\N
+119	2024-05-30	compra	-500.00	Sin descripción	EGRESO	f	\N
+118	2024-01-09	deposito	500.00	Sin descripción	INGRESO	f	\N
+113	2024-09-02	compra	-3000.00	Ingreso extra	EGRESO	f	\N
+111	2024-06-25	retiro	-2500.00	Ingreso extra	EGRESO	f	\N
+106	2024-02-29	deposito	1500.00	Sin descripción	INGRESO	f	\N
+117	2024-09-15	compra	-100.00	Ingreso mensual	EGRESO	f	\N
+104	2024-06-05	retiro	-100.00	Sin descripción	EGRESO	f	\N
+103	2024-07-26	retiro	-2500.00	Retiro parcial	EGRESO	f	\N
+106	2024-07-28	deposito	1500.00	Ingreso extra	INGRESO	f	\N
+120	2024-12-14	retiro	-500.00	Retiro parcial	EGRESO	f	\N
+115	2024-03-10	deposito	500.00	Sin descripción	INGRESO	f	\N
+101	2024-07-23	retiro	-2500.00	Sin descripción	EGRESO	f	\N
+110	2024-07-13	retiro	-3000.00	Retiro parcial	EGRESO	f	\N
+102	2024-02-12	retiro	-2000.00	Ingreso navideño	EGRESO	f	\N
+106	2024-02-02	retiro	-1500.00	Ingreso navideño	EGRESO	f	\N
+114	2024-06-13	deposito	3000.00	Ingreso mensual	INGRESO	f	\N
+113	2024-10-12	compra	-500.00	Sin descripción	EGRESO	f	\N
+119	2024-11-23	compra	-1000.00	Compra en tienda	EGRESO	f	\N
+110	2024-10-27	deposito	2000.00	Retiro parcial	INGRESO	f	\N
+115	2024-04-09	deposito	100.00	Retiro parcial	INGRESO	f	\N
+103	2024-09-13	compra	-2500.00	Ingreso extra	EGRESO	f	\N
+115	2024-04-16	deposito	1000.00	Ingreso de fin de año	INGRESO	f	\N
+110	2024-10-06	compra	-1500.00	Ingreso extra	EGRESO	f	\N
+103	2024-09-20	compra	-2000.00	Retiro parcial	EGRESO	f	\N
+104	2024-01-31	compra	-1000.00	Ingreso extra	EGRESO	f	\N
+116	2024-08-26	pago	-2000.00	Ingreso extra	EGRESO	f	\N
+110	2024-06-30	retiro	-3000.00	Ingreso extra	EGRESO	f	\N
+109	2024-03-27	deposito	2500.00	Sin descripción	INGRESO	f	\N
+102	2024-02-29	retiro	-500.00	Retiro parcial	EGRESO	f	\N
+102	2024-02-29	compra	-1000.00	Ingreso mensual	EGRESO	f	\N
+113	2024-09-27	compra	-1000.00	Compra en tienda	EGRESO	f	\N
+107	2024-02-09	deposito	2000.00	Retiro parcial	INGRESO	f	\N
+119	2024-12-05	deposito	1000.00	Retiro parcial	INGRESO	f	\N
+103	2024-02-12	deposito	500.00	Ingreso extra	INGRESO	f	\N
+120	2024-03-13	compra	-500.00	Retiro parcial	EGRESO	f	\N
+103	2024-05-15	compra	-1000.00	Compra en tienda	EGRESO	f	\N
+110	2024-08-07	deposito	100.00	Retiro parcial	INGRESO	f	\N
+102	2024-01-08	compra	-3000.00	Ingreso extra	EGRESO	f	\N
+115	2024-10-19	retiro	-100.00	Retiro parcial	EGRESO	f	\N
+104	2024-08-09	compra	-1500.00	Ingreso extra	EGRESO	f	\N
+110	2024-01-29	compra	-1000.00	Ingreso de fin de año	EGRESO	f	\N
+117	2024-07-31	compra	-500.00	Ingreso navideño	EGRESO	f	\N
+110	2024-06-14	deposito	1500.00	Retiro parcial	INGRESO	f	\N
+101	2024-09-05	compra	-100.00	Ingreso navideño	EGRESO	f	\N
+118	2024-02-21	retiro	-2000.00	Ingreso extra	EGRESO	f	\N
+107	2024-09-01	deposito	1500.00	Ingreso extra	INGRESO	f	\N
+118	2024-10-15	retiro	-1500.00	Ingreso extra	EGRESO	f	\N
+119	2024-01-06	deposito	2000.00	Retiro parcial	INGRESO	f	\N
+105	2024-09-13	deposito	1000.00	Retiro parcial	INGRESO	f	\N
+115	2024-01-02	retiro	-3000.00	Ingreso de fin de año	EGRESO	f	\N
+104	2024-03-27	compra	-1500.00	Sin descripción	EGRESO	f	\N
+114	2024-01-23	compra	-1000.00	Compra en tienda	EGRESO	f	\N
+102	2024-01-10	compra	-3000.00	Ingreso mensual	EGRESO	f	\N
+113	2024-05-12	deposito	2500.00	Retiro parcial	INGRESO	f	\N
+110	2024-11-12	retiro	-2000.00	Sin descripción	EGRESO	f	\N
+117	2024-07-29	retiro	-100.00	Retiro parcial	EGRESO	f	\N
+111	2024-09-25	compra	-2500.00	Retiro parcial	EGRESO	f	\N
+106	2024-08-10	deposito	1000.00	Sin descripción	INGRESO	f	\N
+118	2024-08-05	deposito	2000.00	Compra en tienda	INGRESO	f	\N
+107	2024-07-08	retiro	-1500.00	Ingreso extra	EGRESO	f	\N
+113	2024-08-10	compra	-2500.00	Compra en tienda	EGRESO	f	\N
+106	2024-05-13	compra	-1000.00	Sin descripción	EGRESO	f	\N
+111	2024-02-04	deposito	2500.00	Sin descripción	INGRESO	f	\N
+116	2024-12-24	retiro	-1500.00	Ingreso de fin de año	EGRESO	f	\N
+106	2024-12-29	compra	-500.00	Sin descripción	EGRESO	f	\N
+106	2024-03-06	retiro	-500.00	Ingreso de fin de año	EGRESO	f	\N
+109	2024-05-31	deposito	2500.00	Ingreso de fin de año	INGRESO	f	\N
+114	2024-10-09	deposito	100.00	Ingreso navideño	INGRESO	f	\N
+109	2024-01-06	compra	-2000.00	Ingreso navideño	EGRESO	f	\N
+113	2024-02-12	retiro	-1500.00	Sin descripción	EGRESO	f	\N
+117	2024-01-12	compra	-1000.00	Ingreso extra	EGRESO	f	\N
+119	2024-05-24	compra	-100.00	Ingreso de fin de año	EGRESO	f	\N
+101	2024-06-29	deposito	1000.00	Ingreso navideño	INGRESO	f	\N
+108	2024-04-21	retiro	-100.00	Sin descripción	EGRESO	f	\N
+120	2024-01-09	compra	-1500.00	Sin descripción	EGRESO	f	\N
+107	2024-01-04	deposito	1000.00	Retiro parcial	INGRESO	f	\N
+106	2024-10-24	retiro	-3000.00	Retiro parcial	EGRESO	f	\N
+107	2024-06-14	deposito	1500.00	Ingreso mensual	INGRESO	f	\N
+108	2024-07-25	deposito	1000.00	Ingreso mensual	INGRESO	f	\N
+109	2024-02-11	pago	-3000.00	Ingreso de fin de año	EGRESO	f	\N
+103	2024-06-01	retiro	-3000.00	Sin descripción	EGRESO	f	\N
+101	2024-02-06	retiro	-500.00	Retiro parcial	EGRESO	f	\N
+119	2024-08-24	compra	-3000.00	Compra en tienda	EGRESO	f	\N
+115	2024-03-20	pago	-1500.00	Ingreso navideño	EGRESO	f	\N
+106	2024-12-05	deposito	3000.00	Ingreso mensual	INGRESO	f	\N
+119	2024-06-05	deposito	1500.00	Retiro parcial	INGRESO	f	\N
+102	2024-05-18	compra	-1000.00	Sin descripción	EGRESO	f	\N
+117	2024-07-30	compra	-3000.00	Sin descripción	EGRESO	f	\N
+119	2024-12-12	deposito	2000.00	Ingreso mensual	INGRESO	f	\N
+103	2024-03-20	deposito	1500.00	Sin descripción	INGRESO	f	\N
+110	2024-12-28	retiro	-2500.00	Sin descripción	EGRESO	f	\N
+108	2024-10-29	deposito	1000.00	Ingreso navideño	INGRESO	f	\N
+113	2024-09-30	pago	-2500.00	Ingreso navideño	EGRESO	f	\N
+119	2024-03-09	deposito	1500.00	Ingreso de fin de año	INGRESO	f	\N
+118	2024-04-06	deposito	1500.00	Ingreso mensual	INGRESO	f	\N
+120	2024-08-26	compra	-1000.00	Ingreso mensual	EGRESO	f	\N
+114	2024-12-10	retiro	-500.00	Sin descripción	EGRESO	f	\N
+115	2024-04-26	retiro	-1000.00	Sin descripción	EGRESO	f	\N
+112	2024-03-10	retiro	-500.00	Ingreso extra	EGRESO	f	\N
+118	2024-12-01	retiro	-3000.00	Ingreso de fin de año	EGRESO	f	\N
+111	2024-10-14	pago	-1500.00	Retiro parcial	EGRESO	f	\N
+110	2024-10-22	retiro	-500.00	Sin descripción	EGRESO	f	\N
+114	2024-11-02	retiro	-100.00	Retiro parcial	EGRESO	f	\N
+114	2024-01-12	compra	-1500.00	Ingreso extra	EGRESO	f	\N
+111	2024-01-28	compra	-2000.00	Ingreso mensual	EGRESO	f	\N
+109	2024-03-02	retiro	-2000.00	Ingreso mensual	EGRESO	f	\N
+114	2024-02-03	compra	-1500.00	Ingreso navideño	EGRESO	f	\N
+105	2024-02-05	compra	-500.00	Ingreso de fin de año	EGRESO	f	\N
+116	2024-08-06	deposito	2500.00	Sin descripción	INGRESO	f	\N
+112	2024-01-11	deposito	1500.00	Ingreso extra	INGRESO	f	\N
+103	2024-11-19	pago	-3000.00	Ingreso navideño	EGRESO	f	\N
+104	2024-10-24	compra	-2000.00	Ingreso navideño	EGRESO	f	\N
+101	2024-02-09	deposito	2000.00	Retiro parcial	INGRESO	f	\N
+116	2024-12-29	retiro	-1000.00	Compra en tienda	EGRESO	f	\N
+102	2024-01-07	compra	-3000.00	Retiro parcial	EGRESO	f	\N
+102	2024-09-08	deposito	100.00	Ingreso de fin de año	INGRESO	f	\N
+101	2024-11-28	compra	-1000.00	Ingreso de fin de año	EGRESO	f	\N
+111	2024-05-19	compra	-2000.00	Compra en tienda	EGRESO	f	\N
+111	2024-09-11	deposito	1000.00	Sin descripción	INGRESO	f	\N
+103	2024-04-16	retiro	-500.00	Compra en tienda	EGRESO	f	\N
+105	2024-01-08	compra	-1500.00	Compra en tienda	EGRESO	f	\N
+111	2024-03-23	deposito	500.00	Ingreso de fin de año	INGRESO	f	\N
+117	2024-06-13	compra	-3000.00	Ingreso extra	EGRESO	f	\N
+110	2024-07-16	retiro	-500.00	Ingreso de fin de año	EGRESO	f	\N
+112	2024-05-13	deposito	1500.00	Compra en tienda	INGRESO	f	\N
+112	2024-09-15	deposito	100.00	Ingreso navideño	INGRESO	f	\N
+120	2024-04-30	compra	-1000.00	Ingreso mensual	EGRESO	f	\N
+115	2024-11-27	compra	-100.00	Ingreso navideño	EGRESO	f	\N
+111	2024-02-06	compra	-500.00	Retiro parcial	EGRESO	f	\N
+115	2024-04-02	retiro	-3000.00	Ingreso navideño	EGRESO	f	\N
+119	2024-01-06	compra	-1000.00	Ingreso de fin de año	EGRESO	f	\N
+116	2024-10-18	deposito	1500.00	Compra en tienda	INGRESO	f	\N
+115	2024-06-23	pago	-500.00	Sin descripción	EGRESO	f	\N
+109	2024-09-03	deposito	3000.00	Ingreso extra	INGRESO	f	\N
+107	2024-08-18	deposito	1500.00	Ingreso de fin de año	INGRESO	f	\N
+107	2024-09-06	compra	-1500.00	Ingreso extra	EGRESO	f	\N
+102	2024-02-10	retiro	-1000.00	Ingreso extra	EGRESO	f	\N
+105	2024-09-14	deposito	1000.00	Ingreso de fin de año	INGRESO	f	\N
+102	2024-07-01	pago	-100.00	Ingreso extra	EGRESO	f	\N
+116	2024-06-14	compra	-2000.00	Ingreso extra	EGRESO	f	\N
+109	2024-04-16	compra	-500.00	Sin descripción	EGRESO	f	\N
+117	2024-01-30	compra	-500.00	Ingreso navideño	EGRESO	f	\N
+113	2024-10-10	deposito	1000.00	Ingreso navideño	INGRESO	f	\N
+119	2024-01-07	compra	-100.00	Ingreso de fin de año	EGRESO	f	\N
+102	2024-11-14	compra	-1000.00	Sin descripción	EGRESO	f	\N
+114	2024-07-03	compra	-500.00	Ingreso navideño	EGRESO	f	\N
+113	2024-02-02	compra	-3000.00	Sin descripción	EGRESO	f	\N
+110	2024-03-16	compra	-2500.00	Retiro parcial	EGRESO	f	\N
+110	2024-03-02	deposito	2500.00	Sin descripción	INGRESO	f	\N
+113	2024-04-29	deposito	1000.00	Retiro parcial	INGRESO	f	\N
+114	2024-12-28	deposito	3000.00	Ingreso mensual	INGRESO	f	\N
+118	2024-09-18	retiro	-1500.00	Compra en tienda	EGRESO	f	\N
+101	2024-02-03	pago	-500.00	Compra en tienda	EGRESO	f	\N
+114	2024-02-23	compra	-2000.00	Retiro parcial	EGRESO	f	\N
+101	2024-04-16	compra	-2000.00	Sin descripción	EGRESO	f	\N
+108	2024-05-02	deposito	500.00	Ingreso extra	INGRESO	f	\N
+104	2024-01-09	retiro	-3000.00	Sin descripción	EGRESO	f	\N
+101	2024-05-03	compra	-2500.00	Retiro parcial	EGRESO	f	\N
+114	2024-12-20	retiro	-1500.00	Retiro parcial	EGRESO	f	\N
+103	2024-05-12	deposito	2500.00	Ingreso navideño	INGRESO	f	\N
+108	2024-02-13	compra	-3000.00	Ingreso de fin de año	EGRESO	f	\N
+102	2024-01-25	compra	-1000.00	Ingreso de fin de año	EGRESO	f	\N
+106	2024-08-01	deposito	3000.00	Sin descripción	INGRESO	f	\N
+120	2024-09-25	pago	-100.00	Ingreso de fin de año	EGRESO	f	\N
+117	2024-10-19	deposito	2000.00	Ingreso de fin de año	INGRESO	f	\N
+113	2024-02-04	pago	-2500.00	Ingreso navideño	EGRESO	f	\N
+117	2024-01-04	compra	-2000.00	Ingreso de fin de año	EGRESO	f	\N
+110	2024-04-02	compra	-2500.00	Retiro parcial	EGRESO	f	\N
+107	2024-11-21	compra	-1000.00	Sin descripción	EGRESO	f	\N
+117	2024-08-20	compra	-1500.00	Sin descripción	EGRESO	f	\N
+103	2024-11-29	deposito	3000.00	Ingreso extra	INGRESO	f	\N
+104	2024-09-25	deposito	2500.00	Sin descripción	INGRESO	f	\N
+119	2024-03-23	deposito	3000.00	Sin descripción	INGRESO	f	\N
+115	2024-12-08	retiro	-100.00	Ingreso mensual	EGRESO	f	\N
+107	2024-02-07	retiro	-100.00	Sin descripción	EGRESO	f	\N
+110	2024-10-19	deposito	100.00	Retiro parcial	INGRESO	f	\N
+120	2024-11-27	compra	-2500.00	Retiro parcial	EGRESO	f	\N
+117	2024-12-20	pago	-500.00	Ingreso de fin de año	EGRESO	f	\N
+109	2024-07-24	deposito	100.00	Ingreso de fin de año	INGRESO	f	\N
+117	2024-09-20	retiro	-3000.00	Compra en tienda	EGRESO	f	\N
+113	2024-08-28	deposito	1000.00	Ingreso de fin de año	INGRESO	f	\N
+112	2024-10-24	deposito	1500.00	Ingreso mensual	INGRESO	f	\N
+120	2024-11-20	compra	-1500.00	Retiro parcial	EGRESO	f	\N
+103	2024-11-22	deposito	3000.00	Ingreso mensual	INGRESO	f	\N
+110	2024-03-05	compra	-500.00	Ingreso extra	EGRESO	f	\N
+114	2024-10-25	compra	-2000.00	Sin descripción	EGRESO	f	\N
+111	2024-11-20	deposito	100.00	Ingreso mensual	INGRESO	f	\N
+104	2024-12-10	compra	-2500.00	Ingreso mensual	EGRESO	f	\N
+112	2024-11-13	compra	-100.00	Ingreso navideño	EGRESO	f	\N
+107	2024-11-01	compra	-500.00	Ingreso navideño	EGRESO	f	\N
+107	2024-02-05	deposito	2500.00	Sin descripción	INGRESO	f	\N
+111	2024-10-16	compra	-2000.00	Sin descripción	EGRESO	f	\N
+104	2024-03-02	deposito	500.00	Ingreso extra	INGRESO	f	\N
+117	2024-02-06	deposito	2000.00	Sin descripción	INGRESO	f	\N
+101	2024-02-08	compra	-1000.00	Ingreso navideño	EGRESO	f	\N
+114	2024-05-05	deposito	100.00	Ingreso mensual	INGRESO	f	\N
+113	2024-03-17	retiro	-100.00	Ingreso mensual	EGRESO	f	\N
+104	2024-11-27	retiro	-100.00	Ingreso de fin de año	EGRESO	f	\N
+115	2024-10-14	retiro	-1000.00	Sin descripción	EGRESO	f	\N
+101	2024-07-07	compra	-1000.00	Retiro parcial	EGRESO	f	\N
+104	2024-07-15	compra	-1000.00	Ingreso de fin de año	EGRESO	f	\N
+102	2024-11-24	pago	-2500.00	Ingreso mensual	EGRESO	f	\N
+117	2024-05-01	deposito	2500.00	Ingreso de fin de año	INGRESO	f	\N
+102	2024-08-22	deposito	100.00	Ingreso extra	INGRESO	f	\N
+102	2024-05-05	compra	-1000.00	Ingreso extra	EGRESO	f	\N
+115	2024-10-30	pago	-2500.00	Ingreso navideño	EGRESO	f	\N
+116	2024-04-15	retiro	-1000.00	Compra en tienda	EGRESO	f	\N
+115	2024-12-09	retiro	-1000.00	Compra en tienda	EGRESO	f	\N
+117	2024-02-03	deposito	2000.00	Ingreso extra	INGRESO	f	\N
+103	2024-10-16	deposito	1000.00	Ingreso extra	INGRESO	f	\N
+115	2024-09-10	retiro	-1000.00	Ingreso de fin de año	EGRESO	f	\N
+108	2024-06-15	retiro	-3000.00	Sin descripción	EGRESO	f	\N
+115	2024-10-01	compra	-100.00	Ingreso mensual	EGRESO	f	\N
+105	2024-05-07	deposito	1000.00	Compra en tienda	INGRESO	f	\N
+109	2024-03-04	deposito	1500.00	Compra en tienda	INGRESO	f	\N
+115	2024-02-11	retiro	-1000.00	Ingreso de fin de año	EGRESO	f	\N
+104	2024-11-15	compra	-500.00	Retiro parcial	EGRESO	f	\N
+112	2024-05-15	deposito	1000.00	Ingreso de fin de año	INGRESO	f	\N
+116	2024-02-17	compra	-2500.00	Retiro parcial	EGRESO	f	\N
+117	2024-11-17	deposito	2500.00	Sin descripción	INGRESO	f	\N
+112	2024-10-18	retiro	-1000.00	Retiro parcial	EGRESO	f	\N
+109	2024-12-15	pago	-2500.00	Ingreso extra	EGRESO	f	\N
+106	2024-06-22	retiro	-100.00	Ingreso mensual	EGRESO	f	\N
+114	2024-02-19	deposito	2000.00	Sin descripción	INGRESO	f	\N
+114	2024-12-25	compra	-1000.00	Ingreso extra	EGRESO	f	\N
+105	2024-04-05	deposito	2500.00	Ingreso navideño	INGRESO	f	\N
+101	2024-03-24	deposito	1500.00	Retiro parcial	INGRESO	f	\N
+109	2024-06-02	deposito	500.00	Ingreso extra	INGRESO	f	\N
+106	2024-12-24	compra	-100.00	Compra en tienda	EGRESO	f	\N
+111	2024-08-01	retiro	-3000.00	Ingreso extra	EGRESO	f	\N
+112	2024-02-15	compra	-3000.00	Ingreso navideño	EGRESO	f	\N
+114	2024-09-10	compra	-1500.00	Ingreso extra	EGRESO	f	\N
+113	2024-10-26	compra	-2500.00	Retiro parcial	EGRESO	f	\N
+111	2024-06-11	deposito	500.00	Sin descripción	INGRESO	f	\N
+110	2024-03-02	compra	-3000.00	Ingreso navideño	EGRESO	f	\N
+112	2024-11-07	compra	-500.00	Ingreso extra	EGRESO	f	\N
+117	2024-01-31	compra	-2000.00	Sin descripción	EGRESO	f	\N
+113	2024-08-16	deposito	1500.00	Compra en tienda	INGRESO	f	\N
+118	2024-08-10	pago	-2000.00	Compra en tienda	EGRESO	f	\N
+116	2024-04-02	retiro	-2500.00	Compra en tienda	EGRESO	f	\N
+109	2024-09-22	retiro	-2000.00	Sin descripción	EGRESO	f	\N
+113	2024-03-19	compra	-2000.00	Ingreso navideño	EGRESO	f	\N
+103	2024-08-01	compra	-2000.00	Sin descripción	EGRESO	f	\N
+119	2024-10-01	deposito	100.00	Sin descripción	INGRESO	f	\N
+109	2024-01-07	retiro	-3000.00	Compra en tienda	EGRESO	f	\N
+119	2024-05-10	retiro	-100.00	Compra en tienda	EGRESO	f	\N
+113	2024-05-27	retiro	-1000.00	Ingreso navideño	EGRESO	f	\N
+110	2024-06-17	retiro	-1000.00	Sin descripción	EGRESO	f	\N
+112	2024-04-27	deposito	2000.00	Ingreso navideño	INGRESO	f	\N
+112	2024-06-11	compra	-500.00	Ingreso navideño	EGRESO	f	\N
+115	2024-10-13	retiro	-100.00	Ingreso de fin de año	EGRESO	f	\N
+108	2024-06-05	deposito	500.00	Sin descripción	INGRESO	f	\N
+114	2024-11-28	retiro	-1000.00	Sin descripción	EGRESO	f	\N
+109	2024-02-17	deposito	500.00	Compra en tienda	INGRESO	f	\N
+120	2024-11-12	compra	-2000.00	Ingreso extra	EGRESO	f	\N
+102	2024-04-28	retiro	-1500.00	Ingreso mensual	EGRESO	f	\N
+105	2024-04-12	retiro	-100.00	Ingreso navideño	EGRESO	f	\N
+120	2024-11-04	deposito	500.00	Sin descripción	INGRESO	f	\N
+111	2024-12-10	compra	-2000.00	Ingreso extra	EGRESO	f	\N
+106	2024-10-29	deposito	1000.00	Sin descripción	INGRESO	f	\N
+116	2024-06-18	deposito	100.00	Ingreso extra	INGRESO	f	\N
+109	2024-09-17	retiro	-2500.00	Ingreso navideño	EGRESO	f	\N
+111	2024-05-31	retiro	-3000.00	Ingreso extra	EGRESO	f	\N
+114	2024-05-07	compra	-1500.00	Sin descripción	EGRESO	f	\N
+119	2024-12-17	retiro	-500.00	Ingreso extra	EGRESO	f	\N
+116	2024-07-05	retiro	-1000.00	Compra en tienda	EGRESO	f	\N
+103	2024-10-24	compra	-2000.00	Sin descripción	EGRESO	f	\N
+120	2024-06-03	deposito	2500.00	Ingreso mensual	INGRESO	f	\N
+101	2024-07-18	deposito	2500.00	Ingreso extra	INGRESO	f	\N
+108	2024-03-16	retiro	-3000.00	Ingreso de fin de año	EGRESO	f	\N
+116	2024-12-27	deposito	3000.00	Ingreso navideño	INGRESO	f	\N
+113	2024-12-11	retiro	-1000.00	Ingreso mensual	EGRESO	f	\N
+109	2024-08-09	deposito	100.00	Ingreso navideño	INGRESO	f	\N
+116	2024-04-30	compra	-1000.00	Retiro parcial	EGRESO	f	\N
+105	2024-03-13	pago	-1500.00	Ingreso de fin de año	EGRESO	f	\N
+116	2024-06-17	compra	-2000.00	Ingreso mensual	EGRESO	f	\N
+108	2024-09-14	compra	-3000.00	Ingreso de fin de año	EGRESO	f	\N
+120	2024-05-01	compra	-2000.00	Ingreso extra	EGRESO	f	\N
+114	2024-03-30	deposito	2500.00	Ingreso de fin de año	INGRESO	f	\N
+104	2024-01-30	retiro	-3000.00	Retiro parcial	EGRESO	f	\N
+103	2024-03-18	deposito	2000.00	Ingreso navideño	INGRESO	f	\N
+113	2024-04-30	deposito	2500.00	Compra en tienda	INGRESO	f	\N
+109	2024-05-11	compra	-2500.00	Retiro parcial	EGRESO	f	\N
+113	2024-07-20	deposito	2000.00	Ingreso navideño	INGRESO	f	\N
+108	2024-01-19	deposito	100.00	Sin descripción	INGRESO	f	\N
+105	2024-01-22	compra	-100.00	Ingreso navideño	EGRESO	f	\N
+108	2024-02-25	retiro	-2000.00	Ingreso mensual	EGRESO	f	\N
+107	2024-09-02	pago	-3000.00	Sin descripción	EGRESO	f	\N
+117	2024-03-25	compra	-1000.00	Ingreso extra	EGRESO	f	\N
+101	2024-03-27	compra	-2000.00	Ingreso navideño	EGRESO	f	\N
+105	2024-07-07	compra	-1000.00	Ingreso extra	EGRESO	f	\N
+119	2024-07-08	compra	-2500.00	Retiro parcial	EGRESO	f	\N
+109	2024-08-08	compra	-2000.00	Ingreso mensual	EGRESO	f	\N
+116	2024-03-10	compra	-2000.00	Ingreso extra	EGRESO	f	\N
+106	2024-04-03	deposito	500.00	Sin descripción	INGRESO	f	\N
+108	2024-12-16	deposito	1000.00	Compra en tienda	INGRESO	f	\N
+103	2024-07-12	deposito	1500.00	Ingreso mensual	INGRESO	f	\N
+103	2024-10-07	deposito	2500.00	Ingreso de fin de año	INGRESO	f	\N
+114	2024-08-22	deposito	1500.00	Ingreso de fin de año	INGRESO	f	\N
+115	2024-02-09	compra	-500.00	Ingreso extra	EGRESO	f	\N
+109	2024-02-03	retiro	-1500.00	Retiro parcial	EGRESO	f	\N
+110	2024-10-04	compra	-2000.00	Ingreso de fin de año	EGRESO	f	\N
+107	2024-11-12	deposito	3000.00	Ingreso navideño	INGRESO	f	\N
+104	2024-06-12	deposito	2500.00	Ingreso extra	INGRESO	f	\N
+115	2024-07-11	deposito	2500.00	Sin descripción	INGRESO	f	\N
+107	2024-06-09	pago	-2000.00	Compra en tienda	EGRESO	f	\N
+105	2024-02-17	compra	-100.00	Ingreso mensual	EGRESO	f	\N
+101	2024-02-25	deposito	1000.00	Sin descripción	INGRESO	f	\N
+101	2024-08-27	deposito	2500.00	Ingreso mensual	INGRESO	f	\N
+113	2024-01-28	deposito	2500.00	Ingreso de fin de año	INGRESO	f	\N
+120	2024-04-22	retiro	-1500.00	Compra en tienda	EGRESO	f	\N
+106	2024-04-12	deposito	1000.00	Retiro parcial	INGRESO	f	\N
+119	2024-06-14	compra	-500.00	Compra en tienda	EGRESO	f	\N
+116	2024-04-06	deposito	3000.00	Retiro parcial	INGRESO	f	\N
+115	2024-04-01	retiro	-100.00	Sin descripción	EGRESO	f	\N
+103	2024-07-20	compra	-3000.00	Compra en tienda	EGRESO	f	\N
+116	2024-01-18	deposito	1500.00	Compra en tienda	INGRESO	f	\N
+111	2024-05-03	retiro	-500.00	Retiro parcial	EGRESO	f	\N
+111	2024-08-11	compra	-1000.00	Ingreso navideño	EGRESO	f	\N
+108	2024-10-28	deposito	3000.00	Ingreso extra	INGRESO	f	\N
+111	2024-08-07	retiro	-100.00	Sin descripción	EGRESO	f	\N
+108	2024-07-11	retiro	-1000.00	Sin descripción	EGRESO	f	\N
+104	2024-12-05	compra	-500.00	Ingreso mensual	EGRESO	f	\N
+107	2024-07-02	retiro	-2500.00	Ingreso extra	EGRESO	f	\N
+104	2024-10-10	compra	-500.00	Ingreso extra	EGRESO	f	\N
+113	2024-11-15	deposito	500.00	Sin descripción	INGRESO	f	\N
+118	2024-10-13	compra	-2500.00	Ingreso mensual	EGRESO	f	\N
+111	2024-01-07	deposito	100.00	Ingreso mensual	INGRESO	f	\N
+101	2024-03-05	compra	-1500.00	Retiro parcial	EGRESO	f	\N
+111	2024-04-12	retiro	-2500.00	Ingreso mensual	EGRESO	f	\N
+118	2024-01-20	deposito	100.00	Sin descripción	INGRESO	f	\N
+107	2024-01-10	retiro	-3000.00	Sin descripción	EGRESO	f	\N
+118	2024-11-16	deposito	3000.00	Sin descripción	INGRESO	f	\N
+105	2024-06-30	deposito	100.00	Ingreso de fin de año	INGRESO	f	\N
+105	2024-02-29	compra	-2000.00	Ingreso de fin de año	EGRESO	f	\N
+116	2024-04-10	deposito	1500.00	Ingreso extra	INGRESO	f	\N
+118	2024-05-05	retiro	-1500.00	Compra en tienda	EGRESO	f	\N
+112	2024-09-02	deposito	1000.00	Sin descripción	INGRESO	f	\N
+119	2024-01-22	compra	-1000.00	Ingreso de fin de año	EGRESO	f	\N
+110	2024-09-18	retiro	-2500.00	Compra en tienda	EGRESO	f	\N
+108	2024-01-24	compra	-3000.00	Compra en tienda	EGRESO	f	\N
+114	2024-08-26	compra	-3000.00	Compra en tienda	EGRESO	f	\N
+112	2024-03-21	deposito	100.00	Compra en tienda	INGRESO	f	\N
+112	2024-05-11	compra	-2000.00	Compra en tienda	EGRESO	f	\N
+110	2024-06-28	deposito	2500.00	Ingreso mensual	INGRESO	f	\N
+119	2024-12-19	retiro	-1500.00	Ingreso extra	EGRESO	f	\N
+105	2024-03-18	retiro	-2000.00	Ingreso mensual	EGRESO	f	\N
+119	2024-04-12	deposito	1000.00	Compra en tienda	INGRESO	f	\N
+107	2024-10-19	retiro	-100.00	Compra en tienda	EGRESO	f	\N
+110	2024-12-02	pago	-1500.00	Retiro parcial	EGRESO	f	\N
+119	2024-02-27	pago	-2000.00	Compra en tienda	EGRESO	f	\N
+116	2024-01-08	retiro	-2500.00	Ingreso navideño	EGRESO	f	\N
+106	2024-07-04	compra	-2500.00	Ingreso de fin de año	EGRESO	f	\N
+108	2024-04-22	compra	-500.00	Ingreso mensual	EGRESO	f	\N
+107	2024-06-22	retiro	-1500.00	Ingreso mensual	EGRESO	f	\N
+110	2024-08-10	compra	-2000.00	Ingreso de fin de año	EGRESO	f	\N
+113	2024-11-29	compra	-2000.00	Sin descripción	EGRESO	f	\N
+110	2024-06-22	deposito	2000.00	Sin descripción	INGRESO	f	\N
+102	2024-09-15	pago	-1000.00	Retiro parcial	EGRESO	f	\N
+115	2024-07-02	retiro	-2000.00	Sin descripción	EGRESO	f	\N
+105	2024-07-23	compra	-500.00	Ingreso de fin de año	EGRESO	f	\N
+103	2024-12-24	compra	-1500.00	Ingreso de fin de año	EGRESO	f	\N
+114	2024-03-20	deposito	1500.00	Sin descripción	INGRESO	f	\N
+104	2024-02-26	deposito	500.00	Retiro parcial	INGRESO	f	\N
+105	2024-08-31	retiro	-2500.00	Compra en tienda	EGRESO	f	\N
+109	2024-04-23	deposito	100.00	Retiro parcial	INGRESO	f	\N
+102	2024-10-13	retiro	-2500.00	Ingreso extra	EGRESO	f	\N
+105	2024-02-23	retiro	-1000.00	Ingreso extra	EGRESO	f	\N
+104	2024-11-22	compra	-3000.00	Retiro parcial	EGRESO	f	\N
+107	2024-09-06	pago	-3000.00	Sin descripción	EGRESO	f	\N
+111	2024-12-30	compra	-500.00	Ingreso de fin de año	EGRESO	f	\N
+117	2024-09-25	deposito	3000.00	Retiro parcial	INGRESO	f	\N
+117	2024-04-29	retiro	-100.00	Ingreso de fin de año	EGRESO	f	\N
+103	2024-10-19	deposito	100.00	Sin descripción	INGRESO	f	\N
+107	2024-12-12	deposito	2000.00	Ingreso mensual	INGRESO	f	\N
+107	2024-05-08	retiro	-2000.00	Ingreso navideño	EGRESO	f	\N
+108	2024-09-09	retiro	-100.00	Ingreso de fin de año	EGRESO	f	\N
+120	2024-03-15	deposito	3000.00	Ingreso navideño	INGRESO	f	\N
+120	2024-03-12	compra	-2000.00	Ingreso de fin de año	EGRESO	f	\N
+111	2024-06-24	retiro	-1500.00	Ingreso navideño	EGRESO	f	\N
+114	2024-02-04	retiro	-100.00	Ingreso extra	EGRESO	f	\N
+109	2024-04-22	deposito	3000.00	Ingreso mensual	INGRESO	f	\N
+116	2024-01-26	compra	-2000.00	Retiro parcial	EGRESO	f	\N
+114	2024-01-13	compra	-2000.00	Retiro parcial	EGRESO	f	\N
+108	2024-01-26	retiro	-500.00	Ingreso de fin de año	EGRESO	f	\N
+105	2024-04-10	retiro	-1500.00	Retiro parcial	EGRESO	f	\N
+107	2024-11-24	retiro	-1000.00	Ingreso mensual	EGRESO	f	\N
+108	2024-03-20	retiro	-500.00	Compra en tienda	EGRESO	f	\N
+114	2024-12-19	retiro	-1000.00	Ingreso de fin de año	EGRESO	f	\N
+113	2024-05-07	pago	-100.00	Sin descripción	EGRESO	f	\N
+116	2024-02-05	compra	-3000.00	Ingreso navideño	EGRESO	f	\N
+107	2024-07-19	deposito	100.00	Ingreso extra	INGRESO	f	\N
+118	2024-09-30	pago	-2500.00	Retiro parcial	EGRESO	f	\N
+101	2024-10-28	retiro	-3000.00	Ingreso navideño	EGRESO	f	\N
+112	2024-01-28	compra	-3000.00	Sin descripción	EGRESO	f	\N
+120	2024-06-03	compra	-3000.00	Compra en tienda	EGRESO	f	\N
+105	2024-01-07	compra	-1000.00	Ingreso navideño	EGRESO	f	\N
+117	2024-01-13	deposito	2500.00	Ingreso navideño	INGRESO	f	\N
+117	2024-04-02	deposito	1500.00	Ingreso mensual	INGRESO	f	\N
+119	2024-11-19	compra	-100.00	Ingreso mensual	EGRESO	f	\N
+106	2024-06-07	compra	-3000.00	Ingreso mensual	EGRESO	f	\N
+108	2024-08-11	retiro	-3000.00	Ingreso extra	EGRESO	f	\N
+110	2024-03-15	deposito	2000.00	Sin descripción	INGRESO	f	\N
+113	2024-11-02	compra	-2500.00	Sin descripción	EGRESO	f	\N
+120	2024-02-01	deposito	100.00	Ingreso mensual	INGRESO	f	\N
+107	2024-04-20	compra	-100.00	Ingreso extra	EGRESO	f	\N
+108	2024-04-18	deposito	1000.00	Ingreso navideño	INGRESO	f	\N
+120	2024-03-15	compra	-1000.00	Ingreso navideño	EGRESO	f	\N
+108	2024-12-01	retiro	-2500.00	Sin descripción	EGRESO	f	\N
+104	2024-06-28	compra	-3000.00	Retiro parcial	EGRESO	f	\N
+108	2024-07-28	compra	-2000.00	Ingreso de fin de año	EGRESO	f	\N
+115	2024-01-12	deposito	2000.00	Ingreso mensual	INGRESO	f	\N
+107	2024-12-28	deposito	3000.00	Compra en tienda	INGRESO	f	\N
+120	2024-12-14	deposito	2500.00	Ingreso extra	INGRESO	f	\N
+105	2024-10-22	compra	-500.00	Compra en tienda	EGRESO	f	\N
+115	2024-12-12	compra	-1500.00	Ingreso mensual	EGRESO	f	\N
+104	2024-04-24	compra	-3000.00	Sin descripción	EGRESO	f	\N
+120	2024-12-12	deposito	2000.00	Ingreso mensual	INGRESO	f	\N
+118	2024-08-21	deposito	500.00	Ingreso de fin de año	INGRESO	f	\N
+111	2024-08-02	retiro	-1500.00	Ingreso de fin de año	EGRESO	f	\N
+110	2024-01-16	retiro	-500.00	Ingreso extra	EGRESO	f	\N
+117	2024-01-26	deposito	2500.00	Ingreso mensual	INGRESO	f	\N
+106	2024-08-03	retiro	-100.00	Sin descripción	EGRESO	f	\N
+103	2024-09-21	retiro	-1000.00	Ingreso mensual	EGRESO	f	\N
+112	2024-07-12	deposito	2500.00	Compra en tienda	INGRESO	f	\N
+115	2024-01-08	retiro	-1500.00	Ingreso de fin de año	EGRESO	f	\N
+106	2024-12-23	retiro	-2000.00	Ingreso mensual	EGRESO	f	\N
+117	2024-04-07	deposito	1000.00	Ingreso mensual	INGRESO	f	\N
+101	2024-10-13	retiro	-500.00	Compra en tienda	EGRESO	f	\N
+102	2024-05-04	deposito	500.00	Ingreso extra	INGRESO	f	\N
+112	2024-12-18	retiro	-500.00	Ingreso de fin de año	EGRESO	f	\N
+104	2024-07-04	compra	-1500.00	Ingreso extra	EGRESO	f	\N
+103	2024-11-03	deposito	1500.00	Ingreso de fin de año	INGRESO	f	\N
+105	2024-08-14	retiro	-2000.00	Ingreso mensual	EGRESO	f	\N
+105	2024-03-13	retiro	-500.00	Ingreso navideño	EGRESO	f	\N
+102	2024-05-20	deposito	1500.00	Ingreso navideño	INGRESO	f	\N
+117	2024-03-01	retiro	-1000.00	Compra en tienda	EGRESO	f	\N
+118	2024-07-12	pago	-2000.00	Ingreso extra	EGRESO	f	\N
+105	2024-11-16	retiro	-1000.00	Ingreso navideño	EGRESO	f	\N
+101	2024-03-21	compra	-2500.00	Ingreso extra	EGRESO	f	\N
+106	2024-06-06	retiro	-1000.00	Sin descripción	EGRESO	f	\N
+117	2024-11-21	retiro	-1000.00	Retiro parcial	EGRESO	f	\N
+110	2024-11-29	compra	-1000.00	Ingreso mensual	EGRESO	f	\N
+113	2024-03-20	retiro	-1000.00	Compra en tienda	EGRESO	f	\N
+120	2024-01-24	retiro	-3000.00	Sin descripción	EGRESO	f	\N
+119	2024-04-28	deposito	100.00	Sin descripción	INGRESO	f	\N
+103	2024-01-30	deposito	2000.00	Retiro parcial	INGRESO	f	\N
+102	2024-11-22	compra	-2500.00	Retiro parcial	EGRESO	f	\N
+110	2024-09-17	compra	-2000.00	Ingreso de fin de año	EGRESO	f	\N
+107	2024-04-09	pago	-2500.00	Retiro parcial	EGRESO	f	\N
+111	2024-10-16	deposito	1000.00	Ingreso extra	INGRESO	f	\N
+110	2024-08-06	deposito	2000.00	Ingreso navideño	INGRESO	f	\N
+119	2024-04-08	deposito	3000.00	Compra en tienda	INGRESO	f	\N
+105	2024-05-26	deposito	2500.00	Ingreso de fin de año	INGRESO	f	\N
+111	2024-11-07	deposito	1000.00	Ingreso navideño	INGRESO	f	\N
+105	2024-08-08	compra	-500.00	Ingreso de fin de año	EGRESO	f	\N
+108	2024-10-27	retiro	-100.00	Retiro parcial	EGRESO	f	\N
+119	2024-10-04	deposito	2500.00	Ingreso de fin de año	INGRESO	f	\N
+120	2024-12-15	deposito	1000.00	Compra en tienda	INGRESO	f	\N
+118	2024-01-05	compra	-100.00	Compra en tienda	EGRESO	f	\N
+115	2024-05-24	compra	-1000.00	Ingreso navideño	EGRESO	f	\N
+102	2024-10-07	compra	-500.00	Ingreso extra	EGRESO	f	\N
+107	2024-07-01	compra	-2000.00	Ingreso de fin de año	EGRESO	f	\N
+120	2024-09-19	deposito	1000.00	Sin descripción	INGRESO	f	\N
+108	2024-11-11	deposito	100.00	Ingreso extra	INGRESO	f	\N
+114	2024-04-07	compra	-1000.00	Retiro parcial	EGRESO	f	\N
+111	2024-07-03	deposito	1000.00	Sin descripción	INGRESO	f	\N
+120	2024-07-18	deposito	1000.00	Sin descripción	INGRESO	f	\N
+120	2024-01-03	compra	-2000.00	Sin descripción	EGRESO	f	\N
+102	2024-09-11	pago	-3000.00	Ingreso extra	EGRESO	f	\N
+112	2024-05-13	retiro	-1500.00	Ingreso navideño	EGRESO	f	\N
+106	2024-02-03	deposito	2000.00	Ingreso extra	INGRESO	f	\N
+112	2024-12-19	retiro	-100.00	Ingreso de fin de año	EGRESO	f	\N
+115	2024-11-10	compra	-1500.00	Compra en tienda	EGRESO	f	\N
+106	2024-08-04	retiro	-2000.00	Ingreso mensual	EGRESO	f	\N
+110	2024-03-26	retiro	-3000.00	Sin descripción	EGRESO	f	\N
+110	2024-01-31	compra	-2500.00	Ingreso extra	EGRESO	f	\N
+107	2024-01-01	compra	-2000.00	Ingreso extra	EGRESO	f	\N
+107	2024-01-17	deposito	2500.00	Ingreso de fin de año	INGRESO	f	\N
+119	2024-12-28	retiro	-2000.00	Ingreso navideño	EGRESO	f	\N
+104	2024-05-02	compra	-500.00	Sin descripción	EGRESO	f	\N
+105	2024-02-01	deposito	2500.00	Ingreso navideño	INGRESO	f	\N
+103	2024-03-25	retiro	-500.00	Ingreso extra	EGRESO	f	\N
+116	2024-08-24	retiro	-2000.00	Ingreso extra	EGRESO	f	\N
+105	2024-11-25	compra	-1000.00	Ingreso mensual	EGRESO	f	\N
+120	2024-11-29	compra	-1500.00	Ingreso de fin de año	EGRESO	f	\N
+102	2024-09-14	deposito	500.00	Ingreso de fin de año	INGRESO	f	\N
+115	2024-08-26	retiro	-1500.00	Retiro parcial	EGRESO	f	\N
+109	2024-11-17	compra	-3000.00	Ingreso navideño	EGRESO	f	\N
+112	2024-09-13	deposito	2500.00	Ingreso de fin de año	INGRESO	f	\N
+103	2024-01-09	compra	-2000.00	Ingreso de fin de año	EGRESO	f	\N
+102	2024-01-09	deposito	1000.00	Ingreso mensual	INGRESO	f	\N
+107	2024-01-12	compra	-1000.00	Ingreso navideño	EGRESO	f	\N
+101	2024-11-08	deposito	3000.00	Sin descripción	INGRESO	f	\N
+102	2024-01-24	pago	-3000.00	Sin descripción	EGRESO	f	\N
+118	2024-09-23	retiro	-1000.00	Ingreso navideño	EGRESO	f	\N
+104	2024-05-08	compra	-500.00	Compra en tienda	EGRESO	f	\N
+116	2024-12-08	retiro	-100.00	Sin descripción	EGRESO	f	\N
+105	2024-05-16	deposito	500.00	Ingreso navideño	INGRESO	f	\N
+120	2024-05-10	deposito	100.00	Sin descripción	INGRESO	f	\N
+108	2024-11-20	pago	-2500.00	Ingreso extra	EGRESO	f	\N
+103	2024-09-10	deposito	1500.00	Sin descripción	INGRESO	f	\N
+114	2024-03-09	compra	-2500.00	Sin descripción	EGRESO	f	\N
+120	2024-05-07	retiro	-1000.00	Ingreso navideño	EGRESO	f	\N
+119	2024-12-10	compra	-500.00	Compra en tienda	EGRESO	f	\N
+116	2024-05-27	compra	-2500.00	Sin descripción	EGRESO	f	\N
+116	2024-09-03	retiro	-2500.00	Sin descripción	EGRESO	f	\N
+118	2024-10-23	deposito	100.00	Ingreso mensual	INGRESO	f	\N
 \.
 
 
@@ -890,14 +1816,64 @@ COPY public.estados_cuenta (cuenta_id, fecha, transaccion, monto, descripcion, m
 --
 
 COPY public.intereses (cuenta_id, nombre, saldo, edad, tipo, interes, saldo_final, anomalia, motivo) FROM stdin;
-104	Alice Brown	0.00	45	ahorro	0.00	0.00	t	Saldo menor o igual a cero
-108	Steve Rogers	10000.00	80	ahorro	100.00	10100.00	f	\N
-102	Jane Smith	8000.00	25	prestamo	160.00	8140.00	f	\N
-103	Bob Johnson	12000.00	30	prestamo	240.00	12220.00	f	\N
-105	Charlie Green	7000.00	35	hipoteca	0.00	6980.00	t	Tipo de cuenta no contemplado
-106	John Doe	5000.00	30	ahorro	50.00	5030.00	f	\N
-107	Diana Prince	15000.00	40	prestamo	300.00	15280.00	f	\N
-101	John Doe	5000.00	30	ahorro	50.00	4621.00	f	\N
+128	Alice Brown	10000.00	25	ahorro	100.00	10100.00	f	\N
+108	John Doe	7000.00	30	ahorro	70.00	7070.00	f	\N
+112	Unknown	8000.00	30	prestamo	160.00	8160.00	f	\N
+138	Bob Johnson	10000.00	30	prestamo	200.00	10200.00	f	\N
+130	Steve Rogers	10000.00	35	ahorro	100.00	10100.00	f	\N
+137	Diana Prince	10000.00	45	prestamo	200.00	10200.00	f	\N
+147	Charlie Green	12000.00	30	prestamo	240.00	12240.00	f	\N
+135	Jane Smith	12000.00	40	ahorro	120.00	12120.00	f	\N
+124	Jane Smith	10000.00	100	ahorro	100.00	10100.00	f	\N
+145	Jane Smith	8000.00	25	ahorro	80.00	8080.00	f	\N
+115	Diana Prince	10000.00	40	prestamo	200.00	10200.00	f	\N
+105	Jane Smith	8000.00	25	prestamo	160.00	8160.00	f	\N
+142	Diana Prince	8000.00	100	prestamo	160.00	8160.00	f	\N
+144	John Doe	5000.00	35	prestamo	100.00	5100.00	f	\N
+126	John Doe	8000.00	40	prestamo	160.00	8160.00	f	\N
+114	Jane Smith	7000.00	45	prestamo	140.00	7140.00	f	\N
+125	Jane Smith	7000.00	30	ahorro	70.00	7070.00	f	\N
+132	Diana Prince	8000.00	25	prestamo	160.00	8160.00	f	\N
+107	John Doe	12000.00	40	ahorro	120.00	12120.00	f	\N
+118	Diana Prince	7000.00	40	prestamo	140.00	7140.00	f	\N
+127	Bob Johnson	5000.00	40	prestamo	100.00	5100.00	f	\N
+140	Charlie Green	8000.00	100	prestamo	160.00	8160.00	f	\N
+136	John Doe	5000.00	45	ahorro	50.00	5050.00	f	\N
+146	John Doe	10000.00	45	ahorro	100.00	10100.00	f	\N
+122	Unknown	10000.00	40	prestamo	200.00	10200.00	f	\N
+123	Jane Smith	5000.00	25	ahorro	50.00	5050.00	f	\N
+103	Jane Smith	7000.00	100	prestamo	140.00	7140.00	f	\N
+104	Steve Rogers	5000.00	40	ahorro	50.00	5050.00	f	\N
+133	Diana Prince	10000.00	100	ahorro	100.00	10100.00	f	\N
+117	Bob Johnson	8000.00	40	ahorro	80.00	8080.00	f	\N
+116	Unknown	10000.00	30	ahorro	100.00	10100.00	f	\N
+119	Bob Johnson	10000.00	35	ahorro	100.00	10100.00	f	\N
+101	John Doe	5000.00	40	prestamo	100.00	5100.00	f	\N
+113	Alice Brown	7000.00	100	prestamo	140.00	7140.00	f	\N
+111	Diana Prince	5000.00	45	ahorro	50.00	5050.00	f	\N
+110	Charlie Green	12000.00	35	prestamo	240.00	12240.00	f	\N
+129	Jane Smith	8000.00	40	ahorro	80.00	8080.00	f	\N
+106	John Doe	10000.00	40	prestamo	200.00	10200.00	f	\N
+121	Jane Smith	10000.00	35	ahorro	100.00	10100.00	f	\N
+139	John Doe	5000.00	100	ahorro	50.00	5050.00	f	\N
+134	Diana Prince	10000.00	25	ahorro	100.00	10100.00	f	\N
+148	Charlie Green	10000.00	100	ahorro	100.00	10100.00	f	\N
+150	Diana Prince	7000.00	35	prestamo	140.00	7140.00	f	\N
+141	Jane Smith	7000.00	35	ahorro	70.00	7070.00	f	\N
+109	Steve Rogers	5000.00	25	prestamo	100.00	5100.00	f	\N
+143	John Doe	5000.00	100	ahorro	50.00	5050.00	f	\N
+120	Charlie Green	5000.00	45	prestamo	100.00	5100.00	f	\N
+131	Diana Prince	7000.00	35	prestamo	140.00	7140.00	f	\N
+102	Unknown	10000.00	40	ahorro	100.00	10100.00	f	\N
+149	Jane Smith	8000.00	35	prestamo	160.00	8160.00	f	\N
+\.
+
+
+--
+-- Data for Name: payment_operations; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.payment_operations (id, operation_type, source_account_id, target_account_id, amount, created_at) FROM stdin;
 \.
 
 
@@ -906,14 +1882,26 @@ COPY public.intereses (cuenta_id, nombre, saldo, edad, tipo, interes, saldo_fina
 --
 
 COPY public.resumen_anual (cuenta_id, cantidad_movimientos, total_ingresos, total_egresos, saldo_neto, cantidad_anomalias) FROM stdin;
-103	1	2000.00	0.00	2000.00	0
-105	1	2500.00	0.00	2500.00	0
-101	2	1000.00	500.00	500.00	0
-106	1	3000.00	0.00	3000.00	0
-104	1	0.00	100.00	-100.00	0
-107	1	0.00	0.00	0.00	1
-102	1	1500.00	0.00	1500.00	0
-108	1	2000.00	0.00	2000.00	0
+101	44	18100.00	54300.00	-36200.00	0
+116	36	20100.00	43200.00	-23100.00	0
+117	42	31000.00	31800.00	-800.00	0
+114	41	19800.00	41500.00	-21700.00	0
+115	40	10700.00	33900.00	-23200.00	0
+113	40	29000.00	33600.00	-4600.00	0
+119	42	27300.00	33500.00	-6200.00	0
+102	35	5200.00	43600.00	-38400.00	0
+108	38	14900.00	36100.00	-21200.00	0
+109	34	24300.00	39000.00	-14700.00	0
+112	37	28300.00	25300.00	3000.00	0
+118	37	20800.00	33200.00	-12400.00	0
+105	48	18900.00	37400.00	-18500.00	0
+106	33	22000.00	23900.00	-1900.00	0
+104	41	10100.00	53800.00	-43700.00	0
+111	44	17200.00	42800.00	-25600.00	0
+120	40	23700.00	41200.00	-17500.00	0
+110	54	23700.00	70100.00	-46400.00	0
+107	46	31200.00	49500.00	-18300.00	0
+103	47	31800.00	45500.00	-13700.00	0
 \.
 
 
@@ -922,14 +1910,245 @@ COPY public.resumen_anual (cuenta_id, cantidad_movimientos, total_ingresos, tota
 --
 
 COPY public.resumen_transacciones_diarias (fecha, cantidad_transacciones, monto_total, cantidad_anomalias) FROM stdin;
-2024-01-04	1	800.00	0
-2024-01-07	1	3000.00	0
-2024-01-02	1	1500.00	0
-2024-01-05	2	1400.00	0
+2024-04-28	2	4000.00	0
+2024-08-02	1	1200.00	0
+2024-05-09	1	3000.00	0
+2024-11-02	1	3000.00	0
+2024-02-15	3	3400.00	0
+2024-09-29	2	3500.00	0
+2024-11-15	1	800.00	0
+2024-05-16	4	5700.00	0
+2024-03-09	3	2900.00	0
+2024-01-10	2	6000.00	0
+2024-11-21	1	1500.00	0
+2024-07-27	2	1600.00	0
+2024-12-14	1	1500.00	0
+2024-02-27	2	2200.00	0
+2024-06-02	2	1500.00	0
+2024-04-12	2	2300.00	0
+2024-04-06	3	2300.00	0
+2024-08-22	2	1500.00	0
+2024-08-30	1	1000.00	0
+2024-07-20	1	800.00	0
+2024-04-22	4	4900.00	0
+2024-04-17	1	700.00	0
+2024-06-24	2	2000.00	0
+2024-07-18	2	2700.00	0
+2024-02-08	1	800.00	0
+2024-11-19	1	1200.00	0
+2024-04-03	1	700.00	0
+2024-01-31	2	3800.00	0
+2024-06-10	1	1500.00	0
+2024-12-12	1	700.00	0
+2024-06-13	1	1000.00	0
+2024-11-10	1	3000.00	0
+2024-06-12	2	1500.00	0
+2024-01-30	2	3000.00	0
+2024-03-10	2	4000.00	0
+2024-05-22	1	700.00	0
+2024-06-28	1	3000.00	0
+2024-10-06	1	3000.00	0
+2024-01-02	1	3000.00	0
+2024-12-13	2	3700.00	0
+2024-08-14	2	1600.00	0
+2024-03-05	1	3000.00	0
+2024-02-02	2	6000.00	0
+2024-08-28	2	2200.00	0
+2024-11-27	2	1700.00	0
+2024-05-14	1	3000.00	0
+2024-12-09	2	2400.00	0
+2024-02-14	3	3500.00	0
+2024-11-24	1	3000.00	0
+2024-08-23	2	1700.00	0
+2024-11-09	2	2200.00	0
+2024-10-15	1	800.00	0
+2024-03-01	2	1900.00	0
+2024-02-28	1	800.00	0
+2024-11-29	2	3800.00	0
+2024-09-16	1	700.00	0
+2024-08-09	1	1000.00	0
+2024-09-24	1	700.00	0
+2024-08-24	1	1200.00	0
+2024-01-04	1	1000.00	0
+2024-07-21	1	1200.00	0
+2024-03-14	2	2200.00	0
+2024-01-11	2	2700.00	0
+2024-07-17	1	1500.00	0
+2024-08-31	1	3000.00	0
+2024-09-22	1	500.00	0
+2024-12-15	1	1200.00	0
+2024-10-20	2	4000.00	0
+2024-05-20	2	2000.00	0
+2024-04-20	1	800.00	0
+2024-11-01	2	1200.00	0
+2024-08-29	1	1000.00	0
+2024-02-06	1	700.00	0
+2024-05-01	2	1700.00	0
+2024-07-07	1	500.00	0
+2024-06-11	1	1200.00	0
+2024-07-26	1	1000.00	0
+2024-11-03	2	2700.00	0
+2024-08-11	1	1500.00	0
+2024-07-25	3	3400.00	0
+2024-06-27	1	700.00	0
+2024-02-18	1	700.00	0
+2024-07-10	2	3800.00	0
+2024-10-14	4	5300.00	0
+2024-03-16	1	3000.00	0
+2024-10-08	1	1200.00	0
+2024-05-26	1	1000.00	0
+2024-12-19	2	2300.00	0
+2024-04-10	4	3100.00	0
+2024-01-07	3	2300.00	0
+2024-03-25	1	700.00	0
+2024-03-13	2	2300.00	0
+2024-08-01	2	4200.00	0
+2024-07-22	1	800.00	0
+2024-12-11	1	1000.00	0
+2024-01-12	1	3000.00	0
+2024-01-28	2	2700.00	0
+2024-07-13	1	1000.00	0
+2024-10-12	2	3700.00	0
+2024-09-01	1	3000.00	0
+2024-06-22	1	1500.00	0
+2024-03-27	2	2200.00	0
+2024-07-08	1	1500.00	0
+2024-10-01	1	1500.00	0
+2024-12-28	2	2400.00	0
+2024-01-01	2	4000.00	0
+2024-12-05	1	700.00	0
+2024-09-19	2	2500.00	0
+2024-06-08	1	3000.00	0
+2024-10-05	3	3200.00	0
+2024-03-18	2	1500.00	0
+2024-06-25	1	800.00	0
+2024-06-26	1	700.00	0
+2024-02-26	1	3000.00	0
+2024-03-29	3	3200.00	0
+2024-06-29	1	1200.00	0
+2024-05-25	1	3000.00	0
+2024-07-15	1	3000.00	0
+2024-09-10	1	1200.00	0
+2024-06-30	1	3000.00	0
+2024-11-07	2	3500.00	0
+2024-12-29	1	1500.00	0
+2024-05-03	1	1200.00	0
+2024-06-19	2	2300.00	0
+2024-12-17	4	3900.00	0
+2024-05-29	1	1200.00	0
+2024-07-12	4	5900.00	0
+2024-01-20	1	1500.00	0
+2024-06-18	1	1000.00	0
+2024-11-08	1	1000.00	0
+2024-09-20	4	4200.00	0
+2024-07-05	3	5300.00	0
+2024-05-23	1	700.00	0
+2024-01-05	1	500.00	0
+2024-04-29	3	6700.00	0
+2024-12-21	1	800.00	0
+2024-10-02	2	2000.00	0
+2024-09-21	2	1500.00	0
+2024-08-25	2	1600.00	0
+2024-06-06	1	3000.00	0
+2024-12-16	2	2200.00	0
+2024-01-27	1	1000.00	0
+2024-02-05	2	2200.00	0
+2024-01-09	2	3700.00	0
+2024-11-05	1	1200.00	0
+2024-04-07	1	1500.00	0
+2024-04-26	1	1000.00	0
+2024-08-13	1	1200.00	0
+2024-10-19	2	2500.00	0
+2024-09-03	1	1000.00	0
+2024-03-11	2	1600.00	0
+2024-05-06	2	3500.00	0
+2024-09-02	1	800.00	0
+2024-01-24	1	3000.00	0
+2024-04-01	1	700.00	0
+2024-11-17	1	700.00	0
+2024-10-24	3	5200.00	0
+2024-02-04	1	3000.00	0
+2024-05-30	1	500.00	0
+2024-04-15	3	5300.00	0
+2024-01-29	1	1500.00	0
+2024-09-26	2	2000.00	0
+2024-11-23	3	3500.00	0
+2024-10-03	2	2500.00	0
+2024-09-28	1	500.00	0
+2024-05-28	1	3000.00	0
+2024-06-20	2	1500.00	0
+2024-12-10	2	4000.00	0
+2024-06-16	2	2200.00	0
+2024-10-16	2	1600.00	0
+2024-04-09	2	1700.00	0
+2024-11-13	1	1000.00	0
+2024-01-13	2	2200.00	0
+2024-04-25	2	2500.00	0
 2024-01-08	1	1000.00	0
-2024-01-01	1	1000.00	0
-2024-01-03	2	-200.00	2
-2024-01-06	1	1200.00	0
+2024-12-22	1	1500.00	0
+2024-01-03	2	2700.00	0
+2024-03-30	1	3000.00	0
+2024-03-06	1	3000.00	0
+2024-03-03	1	3000.00	0
+2024-10-30	1	1200.00	0
+2024-01-18	2	2200.00	0
+2024-11-11	1	700.00	0
+2024-06-15	1	700.00	0
+2024-10-31	1	1200.00	0
+2024-02-19	3	5700.00	0
+2024-08-15	1	700.00	0
+2024-10-25	4	2800.00	0
+2024-12-08	2	3700.00	0
+2024-08-10	3	3900.00	0
+2024-08-27	3	2700.00	0
+2024-09-17	2	2700.00	0
+2024-09-11	1	1500.00	0
+2024-06-05	3	2600.00	0
+2024-09-23	2	1500.00	0
+2024-09-06	1	1000.00	0
+2024-11-25	1	700.00	0
+2024-02-07	2	3700.00	0
+2024-08-26	1	1500.00	0
+2024-10-17	3	3400.00	0
+2024-05-08	2	2200.00	0
+2024-12-18	1	3000.00	0
+2024-02-22	1	700.00	0
+2024-03-04	3	5500.00	0
+2024-01-06	1	1000.00	0
+2024-09-14	3	2600.00	0
+2024-12-20	3	5200.00	0
+2024-06-01	2	3700.00	0
+2024-08-08	1	1500.00	0
+2024-10-18	2	2300.00	0
+2024-05-11	1	3000.00	0
+2024-07-29	1	1500.00	0
+2024-04-24	2	2200.00	0
+2024-11-20	1	1200.00	0
+2024-09-07	2	3800.00	0
+2024-03-17	4	3500.00	0
+2024-01-22	1	1500.00	0
+2024-07-09	3	5500.00	0
+2024-06-03	2	2500.00	0
+2024-02-09	1	700.00	0
+2024-01-14	1	3000.00	0
+2024-09-13	1	800.00	0
+2024-07-14	2	2200.00	0
+2024-10-09	2	2500.00	0
+2024-05-19	1	1500.00	0
+2024-11-26	1	1500.00	0
+2024-12-23	1	3000.00	0
+2024-04-18	1	800.00	0
+2024-03-02	2	3000.00	0
+2024-04-04	1	1500.00	0
+2024-06-17	3	3700.00	0
+2024-04-08	1	800.00	0
+2024-10-26	1	700.00	0
+2024-04-23	1	1000.00	0
+2024-09-05	3	3000.00	0
+2024-04-05	2	3000.00	0
+2024-10-22	1	3000.00	0
+2024-11-28	1	1000.00	0
+2024-02-17	1	1500.00	0
 \.
 
 
@@ -980,16 +2199,398 @@ COPY public.retiros_atm (id, cuenta_id, fecha_hora, monto) FROM stdin;
 --
 
 COPY public.transacciones (id, fecha, monto, tipo, anomalia, motivo) FROM stdin;
-1	2024-01-01	1000.00	debito	f	\N
-2	2024-01-02	1500.00	credito	f	\N
-3	2024-01-03	-200.00	debito	t	Monto negativo
-4	2024-01-03	0.00	debito	t	Monto igual a cero
-5	2024-01-04	800.00	credito	f	\N
-6	2024-01-05	700.00	debito	f	\N
-7	2024-01-06	1200.00	credito	f	\N
-8	2024-01-05	700.00	debito	f	\N
-9	2024-01-07	3000.00	debito	f	\N
-10	2024-01-08	1000.00	credito	f	\N
+2	2024-12-11	1000.00	credito	f	\N
+8	2024-03-17	800.00	debito	f	\N
+9	2024-04-20	800.00	credito	f	\N
+11	2024-04-15	800.00	credito	f	\N
+14	2024-11-24	3000.00	debito	f	\N
+15	2024-02-14	1200.00	debito	f	\N
+24	2024-12-21	800.00	debito	f	\N
+25	2024-03-29	1000.00	debito	f	\N
+26	2024-04-29	3000.00	debito	f	\N
+27	2024-10-03	1500.00	debito	f	\N
+30	2024-01-31	800.00	credito	f	\N
+31	2024-05-03	1200.00	credito	f	\N
+35	2024-07-27	800.00	debito	f	\N
+37	2024-02-09	700.00	credito	f	\N
+41	2024-08-15	700.00	debito	f	\N
+42	2024-06-15	700.00	debito	f	\N
+44	2024-03-14	1500.00	credito	f	\N
+47	2024-11-03	1200.00	debito	f	\N
+58	2024-11-25	700.00	debito	f	\N
+62	2024-04-10	700.00	debito	f	\N
+65	2024-04-25	1500.00	debito	f	\N
+68	2024-03-01	700.00	debito	f	\N
+70	2024-06-16	1200.00	credito	f	\N
+71	2024-05-01	700.00	credito	f	\N
+73	2024-08-02	1200.00	credito	f	\N
+74	2024-03-06	3000.00	debito	f	\N
+76	2024-07-15	3000.00	debito	f	\N
+78	2024-04-10	700.00	debito	f	\N
+79	2024-08-31	3000.00	debito	f	\N
+82	2024-10-24	3000.00	credito	f	\N
+85	2024-01-14	3000.00	credito	f	\N
+88	2024-06-27	700.00	credito	f	\N
+92	2024-02-08	800.00	debito	f	\N
+93	2024-02-28	800.00	credito	f	\N
+96	2024-12-23	3000.00	debito	f	\N
+99	2024-04-08	800.00	credito	f	\N
+101	2024-05-26	1000.00	debito	f	\N
+102	2024-11-08	1000.00	debito	f	\N
+104	2024-12-19	1500.00	credito	f	\N
+105	2024-03-10	3000.00	debito	f	\N
+107	2024-09-20	1200.00	credito	f	\N
+108	2024-09-11	1500.00	debito	f	\N
+110	2024-09-07	800.00	credito	f	\N
+116	2024-03-09	1000.00	credito	f	\N
+119	2024-04-29	700.00	debito	f	\N
+120	2024-01-04	1000.00	debito	f	\N
+121	2024-11-09	1500.00	credito	f	\N
+123	2024-05-01	1000.00	debito	f	\N
+129	2024-07-25	1200.00	credito	f	\N
+130	2024-10-09	1000.00	credito	f	\N
+133	2024-04-22	1200.00	credito	f	\N
+136	2024-04-01	700.00	debito	f	\N
+138	2024-09-20	1000.00	debito	f	\N
+141	2024-08-10	1200.00	debito	f	\N
+144	2024-11-27	1200.00	debito	f	\N
+147	2024-06-13	1000.00	credito	f	\N
+150	2024-07-12	1000.00	credito	f	\N
+151	2024-04-10	1000.00	credito	f	\N
+156	2024-11-21	1500.00	debito	f	\N
+161	2024-01-29	1500.00	debito	f	\N
+162	2024-10-22	3000.00	debito	f	\N
+163	2024-06-20	700.00	debito	f	\N
+164	2024-12-05	700.00	debito	f	\N
+166	2024-02-22	700.00	debito	f	\N
+167	2024-06-16	1000.00	debito	f	\N
+169	2024-12-28	1200.00	debito	f	\N
+171	2024-09-23	1000.00	debito	f	\N
+172	2024-09-20	1000.00	credito	f	\N
+173	2024-04-12	800.00	credito	f	\N
+174	2024-03-29	1500.00	debito	f	\N
+178	2024-10-24	1200.00	debito	f	\N
+181	2024-02-14	800.00	debito	f	\N
+182	2024-12-14	1500.00	debito	f	\N
+184	2024-09-26	1000.00	debito	f	\N
+185	2024-06-25	800.00	debito	f	\N
+187	2024-01-18	700.00	credito	f	\N
+192	2024-04-28	1000.00	debito	f	\N
+196	2024-09-05	1000.00	credito	f	\N
+197	2024-01-01	1000.00	credito	f	\N
+203	2024-12-12	700.00	debito	f	\N
+204	2024-01-18	1500.00	debito	f	\N
+207	2024-03-09	700.00	debito	f	\N
+208	2024-12-16	700.00	credito	f	\N
+210	2024-09-21	700.00	credito	f	\N
+215	2024-06-03	1000.00	debito	f	\N
+216	2024-06-05	1000.00	debito	f	\N
+218	2024-09-14	1200.00	credito	f	\N
+220	2024-03-17	800.00	credito	f	\N
+223	2024-03-11	800.00	credito	f	\N
+229	2024-10-20	1000.00	debito	f	\N
+233	2024-08-29	1000.00	debito	f	\N
+237	2024-05-16	800.00	debito	f	\N
+238	2024-04-24	1200.00	credito	f	\N
+240	2024-05-08	1200.00	debito	f	\N
+244	2024-02-07	700.00	debito	f	\N
+247	2024-12-17	800.00	debito	f	\N
+248	2024-06-24	1200.00	credito	f	\N
+249	2024-09-03	1000.00	debito	f	\N
+250	2024-06-12	800.00	debito	f	\N
+251	2024-06-12	700.00	credito	f	\N
+254	2024-04-15	1500.00	debito	f	\N
+258	2024-10-12	3000.00	credito	f	\N
+259	2024-01-24	3000.00	credito	f	\N
+260	2024-12-08	3000.00	credito	f	\N
+269	2024-05-14	3000.00	debito	f	\N
+271	2024-04-06	1000.00	credito	f	\N
+272	2024-08-14	800.00	debito	f	\N
+274	2024-10-15	800.00	debito	f	\N
+276	2024-12-20	700.00	debito	f	\N
+277	2024-02-19	1200.00	debito	f	\N
+278	2024-11-23	1200.00	credito	f	\N
+279	2024-02-05	1200.00	credito	f	\N
+282	2024-06-10	1500.00	debito	f	\N
+283	2024-06-26	700.00	credito	f	\N
+284	2024-07-07	500.00	debito	f	\N
+286	2024-01-28	1200.00	debito	f	\N
+288	2024-10-01	1500.00	credito	f	\N
+290	2024-03-17	1200.00	credito	f	\N
+293	2024-04-24	1000.00	credito	f	\N
+294	2024-05-16	1200.00	credito	f	\N
+297	2024-03-27	1200.00	debito	f	\N
+298	2024-12-15	1200.00	debito	f	\N
+303	2024-08-08	1500.00	credito	f	\N
+310	2024-04-28	3000.00	debito	f	\N
+312	2024-10-17	1200.00	debito	f	\N
+313	2024-09-28	500.00	credito	f	\N
+315	2024-03-04	1000.00	credito	f	\N
+317	2024-06-02	800.00	debito	f	\N
+318	2024-02-04	3000.00	credito	f	\N
+319	2024-05-30	500.00	debito	f	\N
+320	2024-06-20	800.00	debito	f	\N
+322	2024-06-17	1000.00	debito	f	\N
+323	2024-03-02	1500.00	credito	f	\N
+326	2024-05-28	3000.00	debito	f	\N
+327	2024-01-10	3000.00	debito	f	\N
+329	2024-11-23	800.00	debito	f	\N
+501	2024-07-13	1000.00	credito	f	\N
+505	2024-05-08	1000.00	debito	f	\N
+508	2024-04-18	800.00	credito	f	\N
+513	2024-11-07	3000.00	credito	f	\N
+515	2024-01-28	1500.00	debito	f	\N
+517	2024-09-20	1000.00	debito	f	\N
+523	2024-10-09	1500.00	debito	f	\N
+524	2024-04-23	1000.00	debito	f	\N
+527	2024-05-20	1200.00	debito	f	\N
+528	2024-01-11	1500.00	credito	f	\N
+531	2024-08-25	800.00	debito	f	\N
+535	2024-08-14	800.00	debito	f	\N
+538	2024-09-24	700.00	debito	f	\N
+542	2024-07-10	800.00	debito	f	\N
+550	2024-09-01	3000.00	credito	f	\N
+551	2024-01-05	500.00	debito	f	\N
+553	2024-09-29	3000.00	debito	f	\N
+557	2024-01-06	1000.00	debito	f	\N
+558	2024-07-12	700.00	debito	f	\N
+562	2024-05-06	3000.00	debito	f	\N
+566	2024-08-26	1500.00	debito	f	\N
+570	2024-09-02	800.00	debito	f	\N
+583	2024-04-04	1500.00	debito	f	\N
+585	2024-10-25	700.00	debito	f	\N
+593	2024-08-01	1200.00	credito	f	\N
+595	2024-07-14	1200.00	credito	f	\N
+596	2024-01-20	1500.00	credito	f	\N
+600	2024-07-14	1000.00	debito	f	\N
+601	2024-10-19	1000.00	debito	f	\N
+602	2024-10-16	800.00	debito	f	\N
+604	2024-01-09	700.00	debito	f	\N
+605	2024-07-12	3000.00	debito	f	\N
+607	2024-10-17	1500.00	credito	f	\N
+608	2024-05-06	500.00	debito	f	\N
+610	2024-08-10	1500.00	debito	f	\N
+612	2024-12-09	1200.00	debito	f	\N
+618	2024-02-17	1500.00	debito	f	\N
+619	2024-12-10	1000.00	debito	f	\N
+621	2024-02-15	1200.00	debito	f	\N
+624	2024-12-17	700.00	debito	f	\N
+625	2024-05-22	700.00	debito	f	\N
+638	2024-09-13	800.00	credito	f	\N
+640	2024-05-16	3000.00	credito	f	\N
+641	2024-10-03	1000.00	credito	f	\N
+642	2024-11-15	800.00	debito	f	\N
+643	2024-03-16	3000.00	credito	f	\N
+644	2024-12-17	1200.00	debito	f	\N
+645	2024-12-22	1500.00	debito	f	\N
+647	2024-10-18	1500.00	debito	f	\N
+649	2024-10-26	700.00	credito	f	\N
+650	2024-10-17	700.00	credito	f	\N
+652	2024-02-18	700.00	debito	f	\N
+653	2024-02-26	3000.00	credito	f	\N
+654	2024-10-31	1200.00	credito	f	\N
+655	2024-12-29	1500.00	credito	f	\N
+663	2024-06-08	3000.00	credito	f	\N
+664	2024-04-25	1000.00	debito	f	\N
+665	2024-06-19	1500.00	debito	f	\N
+666	2024-06-18	1000.00	debito	f	\N
+671	2024-09-17	1500.00	credito	f	\N
+675	2024-11-05	1200.00	debito	f	\N
+677	2024-09-17	1200.00	credito	f	\N
+679	2024-10-05	1200.00	credito	f	\N
+680	2024-01-07	700.00	debito	f	\N
+682	2024-12-10	3000.00	credito	f	\N
+685	2024-12-20	1500.00	debito	f	\N
+687	2024-04-05	1500.00	credito	f	\N
+691	2024-06-01	700.00	credito	f	\N
+693	2024-03-13	800.00	debito	f	\N
+695	2024-10-20	3000.00	credito	f	\N
+698	2024-07-25	1500.00	credito	f	\N
+699	2024-04-09	1200.00	debito	f	\N
+707	2024-02-19	1500.00	debito	f	\N
+708	2024-05-19	1500.00	credito	f	\N
+710	2024-03-11	800.00	debito	f	\N
+711	2024-03-01	1200.00	debito	f	\N
+713	2024-06-05	800.00	credito	f	\N
+714	2024-01-10	3000.00	credito	f	\N
+715	2024-10-24	1000.00	debito	f	\N
+716	2024-11-29	800.00	credito	f	\N
+727	2024-07-05	3000.00	debito	f	\N
+732	2024-06-17	1500.00	debito	f	\N
+733	2024-09-14	700.00	debito	f	\N
+735	2024-06-17	1200.00	credito	f	\N
+737	2024-03-27	1000.00	credito	f	\N
+742	2024-09-06	1000.00	debito	f	\N
+745	2024-06-05	800.00	credito	f	\N
+746	2024-02-06	700.00	credito	f	\N
+749	2024-04-12	1500.00	credito	f	\N
+755	2024-09-16	700.00	credito	f	\N
+757	2024-11-13	1000.00	credito	f	\N
+759	2024-03-03	3000.00	debito	f	\N
+760	2024-04-07	1500.00	debito	f	\N
+761	2024-10-16	800.00	credito	f	\N
+762	2024-04-05	1500.00	credito	f	\N
+763	2024-10-25	700.00	credito	f	\N
+764	2024-11-23	1500.00	credito	f	\N
+766	2024-08-24	1200.00	debito	f	\N
+774	2024-04-09	500.00	debito	f	\N
+777	2024-03-30	3000.00	credito	f	\N
+779	2024-07-10	3000.00	credito	f	\N
+784	2024-12-09	1200.00	credito	f	\N
+788	2024-12-13	3000.00	debito	f	\N
+793	2024-01-03	1500.00	credito	f	\N
+795	2024-11-11	700.00	debito	f	\N
+797	2024-08-28	1200.00	debito	f	\N
+798	2024-04-03	700.00	credito	f	\N
+799	2024-01-07	800.00	debito	f	\N
+807	2024-09-26	1000.00	credito	f	\N
+809	2024-09-29	500.00	credito	f	\N
+815	2024-01-02	3000.00	debito	f	\N
+818	2024-09-14	700.00	debito	f	\N
+820	2024-07-08	1500.00	credito	f	\N
+823	2024-01-31	3000.00	debito	f	\N
+825	2024-04-22	1000.00	debito	f	\N
+826	2024-10-25	700.00	debito	f	\N
+833	2024-11-28	1000.00	debito	f	\N
+836	2024-03-13	1500.00	credito	f	\N
+837	2024-07-29	1500.00	debito	f	\N
+838	2024-06-24	800.00	credito	f	\N
+839	2024-07-26	1000.00	debito	f	\N
+840	2024-11-03	1500.00	credito	f	\N
+841	2024-12-08	700.00	debito	f	\N
+842	2024-06-03	1500.00	debito	f	\N
+843	2024-07-12	1200.00	debito	f	\N
+844	2024-03-10	1000.00	credito	f	\N
+845	2024-07-27	800.00	credito	f	\N
+846	2024-01-13	1200.00	debito	f	\N
+847	2024-03-14	700.00	credito	f	\N
+851	2024-08-27	1200.00	credito	f	\N
+855	2024-12-17	1200.00	debito	f	\N
+856	2024-10-30	1200.00	credito	f	\N
+858	2024-10-14	1000.00	credito	f	\N
+862	2024-03-05	3000.00	credito	f	\N
+868	2024-01-27	1000.00	credito	f	\N
+875	2024-11-27	500.00	debito	f	\N
+876	2024-09-10	1200.00	credito	f	\N
+877	2024-10-14	500.00	debito	f	\N
+881	2024-01-01	3000.00	debito	f	\N
+883	2024-03-25	700.00	credito	f	\N
+884	2024-12-16	1500.00	credito	f	\N
+886	2024-07-09	1000.00	debito	f	\N
+888	2024-01-22	1500.00	credito	f	\N
+890	2024-08-27	700.00	debito	f	\N
+891	2024-01-12	3000.00	credito	f	\N
+894	2024-07-09	1500.00	debito	f	\N
+895	2024-07-17	1500.00	credito	f	\N
+897	2024-10-08	1200.00	debito	f	\N
+899	2024-01-13	1000.00	debito	f	\N
+901	2024-03-02	1500.00	credito	f	\N
+906	2024-03-17	700.00	debito	f	\N
+908	2024-07-05	1500.00	credito	f	\N
+911	2024-08-22	700.00	debito	f	\N
+913	2024-01-07	800.00	debito	f	\N
+916	2024-08-23	700.00	debito	f	\N
+919	2024-05-29	1200.00	credito	f	\N
+920	2024-08-23	1000.00	debito	f	\N
+921	2024-02-14	1500.00	credito	f	\N
+922	2024-11-02	3000.00	credito	f	\N
+923	2024-09-22	500.00	debito	f	\N
+925	2024-12-18	3000.00	credito	f	\N
+926	2024-11-20	1200.00	debito	f	\N
+929	2024-11-17	700.00	credito	f	\N
+931	2024-09-23	500.00	debito	f	\N
+934	2024-12-28	1200.00	credito	f	\N
+935	2024-05-25	3000.00	debito	f	\N
+943	2024-10-14	800.00	credito	f	\N
+944	2024-06-29	1200.00	credito	f	\N
+945	2024-09-21	800.00	debito	f	\N
+952	2024-10-12	700.00	credito	f	\N
+953	2024-06-11	1200.00	credito	f	\N
+957	2024-09-19	1500.00	credito	f	\N
+963	2024-01-03	1200.00	credito	f	\N
+965	2024-03-18	700.00	credito	f	\N
+966	2024-11-19	1200.00	credito	f	\N
+967	2024-08-22	800.00	debito	f	\N
+973	2024-05-23	700.00	credito	f	\N
+974	2024-07-25	700.00	debito	f	\N
+976	2024-10-25	700.00	credito	f	\N
+978	2024-09-07	3000.00	credito	f	\N
+980	2024-08-11	1500.00	debito	f	\N
+981	2024-02-02	3000.00	debito	f	\N
+982	2024-07-21	1200.00	credito	f	\N
+984	2024-07-22	800.00	debito	f	\N
+985	2024-04-06	500.00	debito	f	\N
+990	2024-10-18	800.00	debito	f	\N
+994	2024-06-30	3000.00	debito	f	\N
+999	2024-01-30	1500.00	debito	f	\N
+336	2024-07-18	1500.00	debito	f	\N
+337	2024-11-29	3000.00	credito	f	\N
+340	2024-02-27	1000.00	debito	f	\N
+341	2024-01-11	1200.00	debito	f	\N
+343	2024-06-28	3000.00	credito	f	\N
+344	2024-10-02	1200.00	debito	f	\N
+348	2024-08-01	3000.00	credito	f	\N
+349	2024-11-10	3000.00	debito	f	\N
+350	2024-10-06	3000.00	debito	f	\N
+351	2024-07-09	3000.00	credito	f	\N
+352	2024-02-02	3000.00	debito	f	\N
+353	2024-04-15	3000.00	debito	f	\N
+358	2024-02-07	3000.00	debito	f	\N
+361	2024-07-20	800.00	debito	f	\N
+368	2024-08-25	800.00	credito	f	\N
+372	2024-12-13	700.00	credito	f	\N
+376	2024-08-10	1200.00	credito	f	\N
+379	2024-05-16	700.00	credito	f	\N
+382	2024-04-17	700.00	debito	f	\N
+384	2024-03-04	3000.00	debito	f	\N
+385	2024-09-19	1000.00	debito	f	\N
+387	2024-11-01	500.00	credito	f	\N
+389	2024-08-30	1000.00	credito	f	\N
+396	2024-10-14	3000.00	debito	f	\N
+400	2024-01-09	3000.00	debito	f	\N
+402	2024-04-10	700.00	debito	f	\N
+404	2024-11-09	700.00	credito	f	\N
+408	2024-10-02	800.00	credito	f	\N
+409	2024-03-04	1500.00	debito	f	\N
+410	2024-10-05	1500.00	credito	f	\N
+411	2024-11-01	700.00	debito	f	\N
+416	2024-06-06	3000.00	debito	f	\N
+418	2024-10-19	1500.00	credito	f	\N
+424	2024-03-09	1200.00	debito	f	\N
+425	2024-06-19	800.00	credito	f	\N
+426	2024-08-13	1200.00	credito	f	\N
+429	2024-04-29	3000.00	credito	f	\N
+437	2024-04-06	800.00	credito	f	\N
+438	2024-08-27	800.00	debito	f	\N
+442	2024-07-18	1200.00	credito	f	\N
+444	2024-07-05	800.00	credito	f	\N
+451	2024-02-27	1200.00	debito	f	\N
+454	2024-02-19	3000.00	debito	f	\N
+455	2024-02-05	1000.00	debito	f	\N
+457	2024-01-08	1000.00	credito	f	\N
+458	2024-02-15	1200.00	credito	f	\N
+459	2024-06-22	1500.00	debito	f	\N
+460	2024-04-22	1200.00	credito	f	\N
+461	2024-08-28	1000.00	debito	f	\N
+462	2024-04-26	1000.00	debito	f	\N
+464	2024-01-30	1500.00	credito	f	\N
+467	2024-12-19	800.00	credito	f	\N
+469	2024-03-29	700.00	debito	f	\N
+471	2024-10-05	500.00	credito	f	\N
+472	2024-03-18	800.00	debito	f	\N
+473	2024-11-07	500.00	credito	f	\N
+474	2024-09-05	800.00	credito	f	\N
+476	2024-09-05	1200.00	debito	f	\N
+479	2024-02-15	1000.00	debito	f	\N
+480	2024-11-26	1500.00	credito	f	\N
+481	2024-08-09	1000.00	credito	f	\N
+483	2024-04-22	1500.00	credito	f	\N
+487	2024-05-11	3000.00	credito	f	\N
+489	2024-05-09	3000.00	credito	f	\N
+492	2024-05-20	800.00	debito	f	\N
+493	2024-06-02	700.00	debito	f	\N
+498	2024-12-20	3000.00	credito	f	\N
+500	2024-06-01	3000.00	debito	f	\N
 \.
 
 
@@ -997,28 +2598,35 @@ COPY public.transacciones (id, fecha, monto, tipo, anomalia, motivo) FROM stdin;
 -- Name: batch_job_execution_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.batch_job_execution_seq', 57, true);
+SELECT pg_catalog.setval('public.batch_job_execution_seq', 64, true);
 
 
 --
 -- Name: batch_job_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.batch_job_seq', 55, true);
+SELECT pg_catalog.setval('public.batch_job_seq', 61, true);
 
 
 --
 -- Name: batch_step_execution_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.batch_step_execution_seq', 151, true);
+SELECT pg_catalog.setval('public.batch_step_execution_seq', 174, true);
+
+
+--
+-- Name: payment_operations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public.payment_operations_id_seq', 2, true);
 
 
 --
 -- Name: retiros_atm_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.retiros_atm_id_seq', 36, true);
+SELECT pg_catalog.setval('public.retiros_atm_id_seq', 42, true);
 
 
 --
@@ -1083,6 +2691,14 @@ ALTER TABLE ONLY public.intereses
 
 ALTER TABLE ONLY public.batch_job_instance
     ADD CONSTRAINT job_inst_un UNIQUE (job_name, job_key);
+
+
+--
+-- Name: payment_operations payment_operations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.payment_operations
+    ADD CONSTRAINT payment_operations_pkey PRIMARY KEY (id);
 
 
 --
@@ -1169,5 +2785,5 @@ ALTER TABLE ONLY public.batch_step_execution_context
 -- PostgreSQL database dump complete
 --
 
-\unrestrict lLUAv4F0nwb2hb8zOLpJOpTSjVbTozykakmp0HPyZHDogBqqNxcBuPVf9kMhEcZ
+\unrestrict vf86Xd6QGYw2VXnOkDosKbJrtEt8xlN5cbnXuHo2YjRmWmLsUgoWUbrXnHFOtXj
 
