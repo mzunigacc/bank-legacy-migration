@@ -1,6 +1,6 @@
 package com.example.bffmobile.service;
 
-import com.example.bffmobile.client.BankCoreClient;
+import com.example.bffmobile.client.AccountServiceClient;
 import com.example.bffmobile.client.dto.CoreAccountResponse;
 import com.example.bffmobile.client.dto.CoreMovementResponse;
 import com.example.bffmobile.dto.MobileAccountDetailResponse;
@@ -16,23 +16,23 @@ public class MobileAccountService {
 
     private static final int MOVEMENT_LIMIT = 2;
 
-    private final BankCoreClient bankCoreClient;
+    private final AccountServiceClient accountServiceClient;
 
-    public MobileAccountService(BankCoreClient bankCoreClient) {
-        this.bankCoreClient = bankCoreClient;
+    public MobileAccountService(AccountServiceClient accountServiceClient) {
+        this.accountServiceClient = accountServiceClient;
     }
 
     public Optional<MobileAccountDetailResponse> getAccount(Long cuentaId) {
 
         Optional<CoreAccountResponse> account =
-                bankCoreClient.getAccount(cuentaId);
+                accountServiceClient.getAccount(cuentaId);
 
         if (account.isEmpty()) {
             return Optional.empty();
         }
 
         List<CoreMovementResponse> movements =
-                bankCoreClient.getMovements(cuentaId);
+                accountServiceClient.getMovements(cuentaId);
 
         List<MobileMovementResponse> recentMovements = movements.stream()
                 .limit(MOVEMENT_LIMIT)
