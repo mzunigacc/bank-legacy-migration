@@ -1,15 +1,12 @@
 package com.example.bffatm.client;
 
-import com.example.bffatm.client.dto.CoreAccountResponse;
 import com.example.bffatm.client.dto.CoreWithdrawalRequest;
 import com.example.bffatm.client.dto.CoreWithdrawalResponse;
 import com.example.bffatm.exception.CoreApiException;
 
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
-import io.github.resilience4j.retry.annotation.Retry;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,62 +16,28 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.math.BigDecimal;
-import java.util.Optional;
 
 @Component
-public class BankCoreClient {
+public class PaymentServiceClient {
+
+    private static final String PAYMENT_SERVICE_URL =
+            "http://payment-service";
 
     private final RestClient restClient;
 
-    public BankCoreClient(
-            RestClient.Builder restClientBuilder,
-            @Value("${bank.core.base-url}") String bankCoreBaseUrl) {
-
-        this.restClient = restClientBuilder
-                .baseUrl(bankCoreBaseUrl)
+    public PaymentServiceClient(RestClient.Builder builder) {
+        this.restClient = builder
+                .baseUrl(PAYMENT_SERVICE_URL)
                 .build();
-    }
-
-    @Retry(name = "bankCore")
-    @CircuitBreaker(
-            name = "bankCore",
-            fallbackMethod = "getAccountFallback"
-    )
-    @Bulkhead(
-            name = "bankCore",
-            type = Bulkhead.Type.SEMAPHORE
-    )
-    public Optional<CoreAccountResponse> getAccount(Long cuentaId) {
-
-        try {
-            CoreAccountResponse response = restClient
-                    .get()
-                    .uri("/internal/accounts/{cuentaId}", cuentaId)
-                    .header(
-                            HttpHeaders.AUTHORIZATION,
-                            bearerToken()
-                    )
-                    .retrieve()
-                    .body(CoreAccountResponse.class);
-
-            return Optional.ofNullable(response);
-
-        } catch (RestClientResponseException exception) {
-
-            if (exception.getStatusCode().value() == 404) {
-                return Optional.empty();
-            }
-
-            throw exception;
-        }
     }
 
     /*
      * No se aplica Retry a retiros porque la operación modifica estado.
      * Un reintento automático podría provocar un retiro duplicado.
      */
+    @CircuitBreaker(name = "paymentService")
     @Bulkhead(
-            name = "bankCore",
+            name = "paymentService",
             type = Bulkhead.Type.SEMAPHORE
     )
     public CoreWithdrawalResponse withdraw(
@@ -120,20 +83,8 @@ public class BankCoreClient {
         }
 
         throw new IllegalStateException(
-                "No existe un token OAuth2 autenticado para propagar a Bank Core"
+                "No existe un token OAuth2 autenticado para propagar a Payment Service"
         );
-    }
-
-    private Optional<CoreAccountResponse> getAccountFallback(
-            Long cuentaId,
-            Throwable throwable) {
-
-        System.out.println(
-                "Fallback Bank Core - cuenta " + cuentaId
-                        + ": " + throwable.getClass().getSimpleName()
-        );
-
-        return Optional.empty();
     }
 
     private String extractMessage(
@@ -145,12 +96,18 @@ public class BankCoreClient {
             return "Saldo insuficiente";
         }
 
-        if (body.contains("No existe la cuenta")) {
+        if (body.contains("Cuenta no encontrada")
+                || body.contains("ACCOUNT_NOT_FOUND")) {
             return "Cuenta no encontrada";
         }
 
-        if (body.contains("monto")) {
+        if (body.contains("monto")
+                || body.contains("VALIDATION_ERROR")) {
             return "El monto del retiro debe ser mayor que cero";
+        }
+
+        if (body.contains("ACCOUNT_SERVICE_UNAVAILABLE")) {
+            return "Servicio de cuentas no disponible";
         }
 
         return "Error al procesar la operación";

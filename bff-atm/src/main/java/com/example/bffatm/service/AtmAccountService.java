@@ -1,6 +1,7 @@
 package com.example.bffatm.service;
 
-import com.example.bffatm.client.BankCoreClient;
+import com.example.bffatm.client.AccountServiceClient;
+import com.example.bffatm.client.PaymentServiceClient;
 import com.example.bffatm.client.dto.CoreAccountResponse;
 import com.example.bffatm.client.dto.CoreWithdrawalResponse;
 import com.example.bffatm.dto.AtmBalanceResponse;
@@ -14,16 +15,21 @@ import java.util.Optional;
 @Service
 public class AtmAccountService {
 
-    private final BankCoreClient bankCoreClient;
+    private final AccountServiceClient accountServiceClient;
+    private final PaymentServiceClient paymentServiceClient;
 
-    public AtmAccountService(BankCoreClient bankCoreClient) {
-        this.bankCoreClient = bankCoreClient;
+    public AtmAccountService(
+            AccountServiceClient accountServiceClient,
+            PaymentServiceClient paymentServiceClient) {
+
+        this.accountServiceClient = accountServiceClient;
+        this.paymentServiceClient = paymentServiceClient;
     }
 
     public Optional<AtmBalanceResponse> getBalance(Long cuentaId) {
 
         Optional<CoreAccountResponse> account =
-                bankCoreClient.getAccount(cuentaId);
+                accountServiceClient.getAccount(cuentaId);
 
         return account.map(value ->
                 new AtmBalanceResponse(
@@ -37,13 +43,13 @@ public class AtmAccountService {
             Long cuentaId,
             BigDecimal monto) {
 
-        CoreWithdrawalResponse coreResponse =
-                bankCoreClient.withdraw(cuentaId, monto);
+        CoreWithdrawalResponse paymentResponse =
+                paymentServiceClient.withdraw(cuentaId, monto);
 
         return new WithdrawalResponse(
-                coreResponse.getCuentaId(),
-                coreResponse.getMonto(),
-                coreResponse.getSaldoNuevo(),
+                paymentResponse.getCuentaId(),
+                paymentResponse.getMonto(),
+                paymentResponse.getSaldoNuevo(),
                 "APROBADO"
         );
     }
