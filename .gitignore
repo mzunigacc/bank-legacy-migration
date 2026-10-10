@@ -11,3 +11,12 @@ target/
 .vscode/
 # Variables de entorno locales
 .env
+
+# Guion local de presentación EFT
+guion.md
+
+# Plantillas locales de generación
+templates/
+
+# Intermedios Word generados
+exports/*.docx
