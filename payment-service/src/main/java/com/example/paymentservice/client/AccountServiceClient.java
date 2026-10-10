@@ -9,6 +9,7 @@ import com.example.paymentservice.dto.DebitResult;
 import com.example.paymentservice.exception.AccountNotFoundException;
 import com.example.paymentservice.exception.AccountServiceUnavailableException;
 import com.example.paymentservice.exception.InsufficientFundsException;
+import com.example.paymentservice.exception.InvalidTransferException;
 import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.http.HttpHeaders;
@@ -106,6 +107,12 @@ public class AccountServiceClient {
                 ))
                 .retrieve()
                 .onStatus(
+                        status -> status.value() == 400,
+                        (request, response) -> {
+                            throw new InvalidTransferException();
+                        }
+                )
+                .onStatus(
                         status -> status.value() == 404,
                         (request, response) -> {
                             throw new AccountNotFoundException(cuentaOrigenId);
@@ -148,6 +155,10 @@ public class AccountServiceClient {
 
         if (throwable instanceof InsufficientFundsException insufficientFunds) {
             throw insufficientFunds;
+        }
+
+        if (throwable instanceof InvalidTransferException invalidTransfer) {
+            throw invalidTransfer;
         }
 
         throw new AccountServiceUnavailableException(throwable);

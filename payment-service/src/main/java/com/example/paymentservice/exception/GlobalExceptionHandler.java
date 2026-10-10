@@ -54,6 +54,18 @@ public class GlobalExceptionHandler {
         );
     }
 
+    @ExceptionHandler(InvalidTransferException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidTransfer(
+            InvalidTransferException ex
+    ) {
+        return ResponseEntity.badRequest().body(
+                Map.of(
+                        "error", "INVALID_TRANSFER",
+                        "message", ex.getMessage()
+                )
+        );
+    }
+
     @ExceptionHandler(AccountServiceUnavailableException.class)
     public ResponseEntity<Map<String, String>> handleAccountServiceUnavailable(
             AccountServiceUnavailableException ex
