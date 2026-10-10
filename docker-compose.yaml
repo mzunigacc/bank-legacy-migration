@@ -58,10 +58,27 @@ services:
         done
 
         echo "Creando/verificando topic bank.withdrawals..."
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --create --if-not-exists --topic bank.withdrawals --partitions 3 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh \
+          --bootstrap-server kafka:29092 \
+          --create \
+          --if-not-exists \
+          --topic bank.withdrawals \
+          --partitions 3 \
+          --replication-factor 1
 
-        echo "Estado final del topic:"
-        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:29092 --describe --topic bank.withdrawals
+        echo "Creando/verificando topic bank.payments..."
+        /opt/kafka/bin/kafka-topics.sh \
+          --bootstrap-server kafka:29092 \
+          --create \
+          --if-not-exists \
+          --topic bank.payments \
+          --partitions 3 \
+          --replication-factor 1
+
+        echo "Topics disponibles:"
+        /opt/kafka/bin/kafka-topics.sh \
+          --bootstrap-server kafka:29092 \
+          --list
 
   # =========================================================
   # SPRING CLOUD
@@ -70,7 +87,7 @@ services:
   config-server:
     build:
       context: ./config-server
-    image: bank-config-server:week8
+    image: bank-config-server:eft
     container_name: bank-config-server
     ports:
       - "8888:8888"
@@ -83,7 +100,7 @@ services:
   discovery-server:
     build:
       context: ./discovery-server
-    image: bank-discovery-server:week8
+    image: bank-discovery-server:eft
     container_name: bank-discovery-server
     ports:
       - "8761:8761"
@@ -92,7 +109,7 @@ services:
   authorization-server:
     build:
       context: ./authorization-server
-    image: bank-authorization-server:week8
+    image: bank-authorization-server:eft
     container_name: bank-authorization-server
     ports:
       - "9000:9000"
@@ -101,17 +118,40 @@ services:
     restart: on-failure
 
   # =========================================================
-  # CORE
+  # MICROSERVICIOS DE NEGOCIO
   # =========================================================
 
-  bank-core:
+  account-service:
     build:
-      context: ./bank-core
-    image: bank-core:week8
-    container_name: bank-core
-    ports:
-      - "8080:8080"
+      context: ./account-service
+    image: bank-account-service:eft
+    container_name: bank-account-service
     environment:
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bank_legacy
+      SPRING_DATASOURCE_USERNAME: bankuser
+      SPRING_DATASOURCE_PASSWORD: bankpass
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://authorization-server:9000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      config-server:
+        condition: service_started
+      discovery-server:
+        condition: service_started
+      authorization-server:
+        condition: service_started
+    restart: on-failure
+
+  payment-service:
+    build:
+      context: ./payment-service
+    image: bank-payment-service:eft
+    container_name: bank-payment-service
+    environment:
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bank_legacy
       SPRING_DATASOURCE_USERNAME: bankuser
       SPRING_DATASOURCE_PASSWORD: bankpass
@@ -122,69 +162,97 @@ services:
         condition: service_healthy
       kafka-init:
         condition: service_completed_successfully
+      config-server:
+        condition: service_started
+      discovery-server:
+        condition: service_started
+      authorization-server:
+        condition: service_started
+      account-service:
+        condition: service_started
+    restart: on-failure
+
+  customer-service:
+    build:
+      context: ./customer-service
+    image: bank-customer-service:eft
+    container_name: bank-customer-service
+    environment:
+      CONFIG_SERVER_URL: http://config-server:8888
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bank_legacy
+      SPRING_DATASOURCE_USERNAME: bankuser
+      SPRING_DATASOURCE_PASSWORD: bankpass
+      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://authorization-server:9000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      config-server:
+        condition: service_started
+      discovery-server:
+        condition: service_started
       authorization-server:
         condition: service_started
     restart: on-failure
 
   # =========================================================
-  # BFF
+  # BFF POR CANAL
   # =========================================================
 
   bff-web:
     build:
       context: ./bff-web
-    image: bank-bff-web:week8
+    image: bank-bff-web:eft
     container_name: bank-bff-web
     ports:
       - "8441:8441"
     environment:
       CONFIG_SERVER_URL: http://config-server:8888
-      BANK_CORE_BASE_URL: http://bank-core:8080
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://authorization-server:9000
     depends_on:
       - config-server
       - discovery-server
       - authorization-server
-      - bank-core
+      - account-service
+      - customer-service
     restart: on-failure
 
   bff-mobile:
     build:
       context: ./bff-mobile
-    image: bank-bff-mobile:week8
+    image: bank-bff-mobile:eft
     container_name: bank-bff-mobile
     ports:
       - "8442:8442"
     environment:
       CONFIG_SERVER_URL: http://config-server:8888
-      BANK_CORE_BASE_URL: http://bank-core:8080
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://authorization-server:9000
     depends_on:
       - config-server
       - discovery-server
       - authorization-server
-      - bank-core
+      - account-service
     restart: on-failure
 
   bff-atm:
     build:
       context: ./bff-atm
-    image: bank-bff-atm:week8
+    image: bank-bff-atm:eft
     container_name: bank-bff-atm
     ports:
       - "8443:8443"
     environment:
       CONFIG_SERVER_URL: http://config-server:8888
-      BANK_CORE_BASE_URL: http://bank-core:8080
       EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://discovery-server:8761/eureka/
       SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: http://authorization-server:9000
     depends_on:
       - config-server
       - discovery-server
       - authorization-server
-      - bank-core
+      - account-service
+      - payment-service
     restart: on-failure
 
   # =========================================================
@@ -194,7 +262,7 @@ services:
   withdrawal-consumer:
     build:
       context: ./withdrawal-consumer
-    image: bank-withdrawal-consumer:week8
+    image: bank-withdrawal-consumer:eft
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
     depends_on:
@@ -209,16 +277,13 @@ services:
   batch:
     build:
       context: ./batch
-    image: bank-batch:week8
+    image: bank-batch:eft
     container_name: bank-batch
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/bank_legacy
       SPRING_DATASOURCE_USERNAME: bankuser
       SPRING_DATASOURCE_PASSWORD: bankpass
-      # El snapshot ya contiene las tablas metadata de Spring Batch.
       SPRING_BATCH_JDBC_INITIALIZE_SCHEMA: never
-
-      # En Docker no ejecutar automáticamente uno de los 3 jobs al iniciar.
       SPRING_BATCH_JOB_ENABLED: "false"
     depends_on:
       postgres:
